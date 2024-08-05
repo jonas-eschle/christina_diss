@@ -2,18 +2,19 @@ from collections import Counter
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import yaml
+
+# load config yaml
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
 
 diagnoses = ['AMD', "DMÖ", 'ZVV_VAV', 'multiple_diagnoses']
 # diagnoses.reverse()
 datasets = [pd.read_excel("data_small.xlsx", sheet_name=name).reset_index(drop=True) for name in diagnoses]
 pd.set_option('display.max_columns', None, 'display.max_rows', None, 'display.expand_frame_repr', False)
-diagnoses_name_mapping = {
-    'AMD': 'SMD',
-    'DMÖ': 'DME',
-    'ZVV_VAV': 'CVO/VAV',
-    'multiple_diagnoses': 'Multiple diagnoses',
-}
+diagnoses_name_mapping = config['diagnosesnames']
 
 ########################################################################################################################
 # Preprocessing of data
@@ -34,6 +35,7 @@ for data in datasets:
         all_cols = set(data.columns)
     else:
         all_cols.intersection_update(data.columns)
+all_cols = list(all_cols)
 datasets = [data[all_cols] for data in datasets]
 
 # add new columns
@@ -57,6 +59,7 @@ def str_mean_std(data: pd.Series, percent=False):
 
 
 n_total = sum(len(d) for d in datasets)
+n_tot_inj = sum(d['n_total'].sum() for d in datasets)
 linelength = 12
 path_all_plots = Path('plots/all')
 path_all_plots.mkdir(parents=True, exist_ok=True)
@@ -107,7 +110,8 @@ for name, data in name_data_iter:
 n_col_all = {k: {k2: f'{v:.4g} +- {n_col_std_all[k][k2]:.2g}' for k2, v in v.items()} for k, v in n_col_all.items()}
 
 print("Injections by med_lat")
-injections_med_lat = pd.DataFrame({k: v.values() for k, v in n_col_all.items()}, index=list(n_col_all.values())[0].keys())
+injections_med_lat = pd.DataFrame({k: v.values() for k, v in n_col_all.items()},
+                                  index=list(n_col_all.values())[0].keys())
 print(injections_med_lat)
 
 print("\n\n\n")
@@ -123,7 +127,7 @@ print("Treatments")
 print(":" * linelength)
 for name, data in name_data_iter:
     print("=" * linelength)
-    print(f"Data {name} treatments")
+    print(f"Data {diagnoses_name_mapping[name]} treatments")
     print("=" * linelength)
     n_collected = {}
     n_collected_std = {}
@@ -146,11 +150,11 @@ for name, data in name_data_iter:
         print(message)
 
     plt.figure(figsize=(10, 6))
-    title = f"{name}: treatment injections per person"
+    title = f"{diagnoses_name_mapping[name]}: treatment injections per person"
     plt.title(title)
     plt.bar(n_collected.keys(), n_collected.values(), align='center')
     plt.xticks(rotation=45)
-    filename = Path(title.replace(" ", "_")).with_suffix('.png')
+    filename = Path(f"{name}: treatment injections per person".replace(" ", "_")).with_suffix('.png')
     plt.savefig(path_all_plots / filename)
     output_file = Path(f'plots/treatments/{name}') / filename
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -261,7 +265,7 @@ results = pd.DataFrame(index=index, columns=adverse_hypo.values())
 results_abs = pd.DataFrame(index=index, columns=adverse_hypo.values())
 for name, data in name_data_iter:
     print("=" * linelength)
-    print(f"Data {name} adverse effects")
+    print(f"Data {diagnoses_name_mapping[name]} adverse effects")
     print("=" * linelength)
     n_collected = {}
     n_collected_std = {}
@@ -279,13 +283,13 @@ for name, data in name_data_iter:
                     pass
                 have_it = (series_sel == i + shift)
                 n_have_it = have_it.sum()
-                ntot = df.shape[0]
-                percent_val = have_it.mean()
+                ntot = df["n_total"].sum()
+                percent_val = n_have_it / ntot
                 results.loc[
                     (name, medication, lat), adverse_name] = f'{percent_val:.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
                 results_abs.loc[(name, medication, lat), adverse_name] = f'{n_have_it} +- {n_have_it ** 0.5:.1f}'
 
-print("Adverse effects per data in percent")
+print("Adverse effects per data in percent of total injections")
 print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
       "\n(medication, uni/bilateral injection taken from table name/encoding)")
 print(results)
@@ -312,7 +316,7 @@ results = pd.DataFrame(index=index, columns=adverse_hypo.values())
 results_abs = pd.DataFrame(index=index, columns=adverse_hypo.values())
 for name, data in name_data_iter:
     print("=" * linelength)
-    print(f"Data {name} adverse effects")
+    print(f"Data {diagnoses_name_mapping[name]} adverse effects")
     print("=" * linelength)
     n_collected = {}
     n_collected_std = {}
@@ -330,13 +334,13 @@ for name, data in name_data_iter:
                     pass
                 have_it = (series_sel == i + shift)
                 n_have_it = have_it.sum()
-                ntot = df.shape[0]
-                percent_val = have_it.mean()
+                ntot = df["n_total"].sum()
+                percent_val = n_have_it / ntot
                 results.loc[
                     (name, medication, lat), adverse_name] = f'{percent_val:.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
                 results_abs.loc[(name, medication, lat), adverse_name] = f'{n_have_it} +- {n_have_it ** 0.5:.1f}'
 
-print("Adverse effects per data in percent")
+print("Adverse effects per data in percent of total injections")
 print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
       "\n(medication, uni/bilateral injection taken from table name/encoding)")
 print(results)
@@ -371,6 +375,8 @@ def pie_diagram(data, name: str):
     coord_same = data.query('coordination_same_intervall == 1')['n_bilateral_txe'].sum() * 2
     coord_diff = data.query('coordination_different_intervall == 1')['n_bilateral_txe'].sum() * 2
     coord_none = data.query('no_coordination == 1')['n_bilateral_txe'].sum() * 2
+    # TODO: horizontal bar diagrams below that show the causes of the different coordination types
+
 
     all_coord = coord_same + coord_diff + coord_none
     # hack, what's the right number?
@@ -394,6 +400,7 @@ def pie_diagram(data, name: str):
                        n_bilat_teprn],
                       labels=['coord same', 'coord diff', 'no coord', ''],
                       **kwargs)
+        # change color of text/bkg in pie for readability
         for wedge in pie[0]:
             wedge.set_alpha(0.2)
         pie[0][-1].set_visible(False)
@@ -402,8 +409,16 @@ def pie_diagram(data, name: str):
                      coord_diff,
                      coord_none,
                      n_bilat_teprn],
-                    labels=['T&E coordination same', 'T&E coordination different', 'T&E no coordination', 'T&E PRN'],
-                    colors=['deepskyblue', 'turquoise', 'dodgerblue', 'red'],
+                    labels=['bilateral T&E coordination same interval', 'bilateral T&E coordination different interval',
+                            'bilateral T&E no coordination', 'T&E PRN'],
+                    # colors=['deepskyblue', 'turquoise', 'green', 'red'],
+                    colors=[
+
+                        "#14185c",
+                        "#ffa600",
+                        "#e9484a",
+                        "#951269", ],
+                    labeldistance=None,
                     **kwargs)
 
     plt.title(f'{name}')
@@ -412,11 +427,12 @@ def pie_diagram(data, name: str):
 plt.subplots(2, 2, figsize=(10, 10))
 for i, (name, data) in enumerate(name_data_iter):
     print("=" * linelength)
-    print(f"Data {name} pie diagram")
+    print(f"Data {diagnoses_name_mapping[name]} pie diagram")
     print("=" * linelength)
     plt.subplot(2, 2, i + 1)
-    pie_diagram(data, name)
-plt.legend()
+    pie_diagram(data, diagnoses_name_mapping[name])
+# plt.suptitle('Pie diagrams of different treatment')
+plt.legend(loc='lower center', bbox_to_anchor=(0.0, -0.2), ncol=2, frameon=False)
 filename = f'pie_diagrams.png'
 output_file = Path(f'plots/pie1') / filename
 output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -470,6 +486,7 @@ for name, data in name_data_iter:
                         #     df_coord[colname_add] = 0
                         # if rowname not in df_coord.index:
                         #     df_coord.loc[rowname] = 0
+
                         df_coord.loc[rowname, colname_add] += row.n_bilateral_txe * 2 / n_coord_causes
                     # print(type(row.coordination_cause), row.coordination_cause)
             else:
@@ -489,7 +506,7 @@ df_coord.to_excel(outfile.with_suffix('.xlsx'), sheet_name='n_bilateral_txe')
 print(df_coord_out)
 
 # get number of bilateral, unilateral and n_patients for all four diagnoses and the two medication types
-
+cfg_general = config['data_general']
 df_general = pd.DataFrame(index=['bilat', 'unilat', 'n_patients'])
 medications = ['eylea', 'lucentis']
 for medication in medications:
@@ -500,16 +517,20 @@ for name, data in name_data_iter:
     df_general.loc['n_patients', name] = data.shape[0]
     for i, medication in enumerate(medications):
         df_general.loc['bilat', medication] += data[f'n_bilateral_{medication}'].sum() * 2
+        df_general.loc['bilat', medication] += data[f'n_bilateral_lucentis_eylea'].sum()  # each on for each eye
         df_general.loc['unilat', medication] += data[f'n_unilateral_{medication}'].sum()
-        df_general.loc['n_patients', medication] += data.query(f'n_{medication}_total >= n_{medications[(i + 1) % 2]}_total').shape[0]
+        df_general.loc['n_patients', medication] += \
+            data.query(f'n_{medication}_total >= n_{medications[(i + 1) % 2]}_total').shape[0]
 
+df_general.rename(index=cfg_general['indexnames'], columns=cfg_general['columnnames'], inplace=True)
+df_general.rename(columns=diagnoses_name_mapping, inplace=True)
 df_general_out = str(df_general)
 print(df_general_out)
 outfile = Path('outputs/df_general')
 outfile.parent.mkdir(parents=True, exist_ok=True)
 with open(outfile.with_suffix('.txt'), 'w') as f:
     f.write(df_general_out)
-df_general.to_excel(outfile.with_suffix('.xlsx'), sheet_name='general')
+df_general.to_excel(outfile.with_suffix('.xlsx'), sheet_name=cfg_general['sheetname'])
 
 # adversarial effects
 lateralities = ['bilateral', 'unilateral']
@@ -518,17 +539,24 @@ for laterality in lateralities:
     for name, data in name_data_iter:
         for i, adverse_col in enumerate(['hyposphagma', 'sicca', 'allergy', 'iod']):
             has_adverse = (data[f'{adverse_col}_{laterality}'].astype(str) != "0")
-            data[f'ocular_ae_{laterality}'] = data[f'ocular_ae_{laterality}'].astype(str) + " " + (has_adverse * (19 + i)).astype(str)
+            data[f'ocular_ae_{laterality}'] = data[f'ocular_ae_{laterality}'].astype(str) + " " + (
+                    has_adverse * (19 + i)).astype(str)
 
         # print(data[f'ocular_ae_{laterality}'])
+        # preprocess data, add the two adverse effects
 
 dfs = {'ocular': None, 'systemic': None}
 neffects = {'ocular': 22, 'systemic': 24}
+
+# make number to effect mapping
+effect_mapping = {}
 
 for adverse_type in ['ocular', 'systemic']:
     df_adverse = pd.DataFrame(index=lateralities, columns=[f'effect_{i + 1}' for i in range(neffects[adverse_type])])
     df_adverse.fillna(0, inplace=True)
     dfs[adverse_type] = df_adverse
+
+
     for name, data in name_data_iter:
         for laterality in lateralities:
             adv_counter = Counter()
@@ -542,23 +570,87 @@ for adverse_type in ['ocular', 'systemic']:
             for effect, count in adv_counter.items():
                 df_adverse.loc[laterality, f'effect_{effect}'] += count
 
-rename_mapping_ocular = {f'effect_19': 'hyposphagma', f'effect_20': 'sicca', f'effect_21': 'allergy', f'effect_22': 'IOD'}
+rename_mapping_ocular = config['adversenames']['ocular']
 dfs['ocular'].rename(columns=rename_mapping_ocular, inplace=True)
+rename_mapping_systemic = config['adversenames']['systemic']
+dfs['systemic'].rename(columns=rename_mapping_systemic, inplace=True)
 for df in dfs.values():
     df['total'] = df.sum(axis=1)
 
-out = "Adverse effects \n" \
-      "================\n"
+dfs_normalized = {}
 for adverse_type in ['ocular', 'systemic']:
-    out += f"{adverse_type} effects (number of occurences) \n"
-    out += str(dfs[adverse_type])
-    out += "\n____________________\n"
-print(out)
+    df = dfs[adverse_type].copy()
+    # df = df.div(df.sum(axis=1), axis=0).fillna(0) * 100  # percentage
+    df = df.div(n_tot_inj, axis=0).fillna(0) * 100  # percentage
+    dfs_normalized[adverse_type] = df
 
-outfile = Path('outputs/df_adverse')
+for dfs_use, normalized in zip([dfs, dfs_normalized], [False, True]):
+
+    out = f"Adverse effects {'percent' if normalized else ''}\n" \
+          "============================\n"
+    for adverse_type in ['ocular', 'systemic']:
+        out += f"{adverse_type} effects (number of occurences) \n"
+        out += str(dfs_use[adverse_type])
+        out += "\n____________________\n"
+    print(out)
+
+    outfile = Path(f'outputs/df_adverse{"_percent" if normalized else ""}')
+    outfile.parent.mkdir(parents=True, exist_ok=True)
+    with open(outfile.with_suffix('.txt'), 'w') as f:
+        f.write(out)
+
+    for adv_type, df in dfs_use.items():
+        for transpose in True, False:
+            file = Path(str(outfile) + f'_{adv_type}{"_transposed" if transpose else ""}')
+            df_tmp = df
+            if transpose:
+                df_tmp = df.transpose()
+            df_tmp.to_excel(file.with_suffix('.xlsx'), sheet_name=adv_type)
+
+# dump summary statistics of all four datasets
+
+columns = [
+    'avg_age',
+    'n_patients',
+    'n_injections',
+    'male_female_ratio_percent',
+    'n_unilateral',
+    'n_bilateral',
+    'delta_bcva',
+    'n_lucentis_total',
+    'n_lucentis_unilateral',
+    'n_lucentis_bilateral',
+    'n_eylea_total',
+    'n_eylea_unilateral',
+    'n_eylea_bilateral',
+]
+
+df_summary = pd.DataFrame(index=diagnoses, columns=columns)
+df_summary.fillna(0, inplace=True)
+for name, data in name_data_iter:
+    df_summary.loc[name, 'avg_age'] = round(data['age'].mean(), 1)
+    n_patients = data.shape[0]
+    df_summary.loc[name, 'n_patients'] = n_patients
+    df_summary.loc[name, 'n_injections'] = data['n_total'].sum()
+    # female is 1, male is 2
+    # TODO: change to nmale (perc_nmale)/ nfemale (perc_nfemale)
+    df_summary.loc[name, 'male_female_ratio_percent'] = round(np.sum(data['sex'] == 2) / np.sum(data['sex'] == 1) * 100,
+                                                              0)
+    df_summary.loc[name, 'n_unilateral'] = data['n_unilateral'].sum()
+    df_summary.loc[name, 'n_bilateral'] = data['n_bilateral'].sum()
+    for medication in medications:
+        df_summary.loc[name, f'n_{medication}_total'] = data[f'n_{medication}_total'].sum()
+        df_summary.loc[name, f'n_{medication}_unilateral'] = data[f'n_unilateral_{medication}'].sum()
+        df_summary.loc[name, f'n_{medication}_bilateral'] = data[f'n_bilateral_{medication}'].sum()
+    df_summary.loc[name, 'delta_bcva'] = round(data['bcva_sum_diff'].mean(), 3)
+
+df_summary.rename(columns=config['data_general']['columnnames'], index=diagnoses_name_mapping, inplace=True)
+# df_summary.rename(, inplace=True)
+df_summary_out = str(df_summary)
+print(df_summary_out)
+outfile = Path('outputs/df_summary')
 outfile.parent.mkdir(parents=True, exist_ok=True)
 with open(outfile.with_suffix('.txt'), 'w') as f:
-    f.write(out)
-for adv_type, df in dfs.items():
-    file = Path(str(outfile) + f'_{adv_type}')
-    df.to_excel(file.with_suffix('.xlsx'), sheet_name=adv_type)
+    f.write(df_summary_out)
+
+df_summary.to_excel(outfile.with_suffix('.xlsx'), sheet_name='summary')

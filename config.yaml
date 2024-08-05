@@ -1,0 +1,79 @@
+data_general:
+  columnnames:
+    eylea: 'Eylea'
+    lucentis: 'Lucentis'
+    avg_age: 'Durchnittsalter'
+    n_injections: 'Anzahl Injektionen'
+    male_female_ratio_percent: 'Männlich/Weiblich (%)'
+    n_patients: '# patients'
+    n_unilateral: '# unilateral'
+    n_bilateral: '# bilateral'
+    delta_bcva: 'Δ BCVA'
+  indexnames:
+    bilat: 'Bilateral IVT'
+    unilat: 'Unilateral IVT'
+    n_patients: '# patients'
+  sheetname: 'Baseline characteristics'
+
+diagnosesnames:
+  AMD: 'nAMD'
+  DMÖ: 'DME'
+  ZVV_VAV: 'CVO/VAV'
+  multiple_diagnoses: 'Multiple diagnoses'
+
+
+adversenames:
+  ocular:
+    effect_1: 'Lidprobleme'
+    effect_2: 'Mouches, GK Destruktion, ERF, HGA'
+    effect_3: 'VK oder GK Blutung'
+    effect_4: 'NH Foramen und Makulaschichtforamen'
+    effect_5: 'ZVV oder VAV unilateral'
+    effect_6: 'Charles bonnet'
+    effect_7: 'BH Pathologien'
+    effect_8: 'Uveitis anterior'
+    effect_9: 'HH Pathologien'
+    effect_10: 'Doppelbilder'
+    effect_11: 'Amotio rhetinae'
+    effect_12: 'Endophthalmitis'
+    effect_13: 'AH Nävus'
+    effect_14: 'Erosio cornea, Ulcus cornea'
+    effect_15: 'IOL dezentriert'
+    effect_16: 'Augenmigräne'
+    effect_17: 'Iritis, Iridocyclitis, Irisdefekt'
+    effect_18: 'HKL subluxiert'
+    effect_19: 'Hyposphagma'
+    effect_20: 'Sicca'
+    effect_21: 'Allergy'
+    effect_22: 'IOD'
+  systemic:
+    effect_1: 'Tod'
+    effect_2: 'Hospitalisation Grund unbekannt'
+    effect_3: 'Hosp Sturzereignis, Fraktur'
+    effect_4: 'Hosp Elektive Eingriffe'
+    effect_5: 'Lagerungsbedingte Beschwerden, RückenSz'
+    effect_6: 'CVI'
+    effect_7: 'Onkolog. Path.'
+    effect_8: 'Hosp Stoffwechselerkrankungen, Infektionen, Dialyse, Fieber'
+    effect_9: 'Hosp Lungenentz, akute Dyspnoe.'
+    effect_10: 'Synkope'
+    effect_11: 'Schwindel, Kopfschmerzen, transiente Sehstörungen, Parästhesien'
+    effect_12: 'Herzinfarkt'
+    effect_13: 'TVT'
+    effect_14: 'Psychische Erkrankungen'
+    effect_15: 'Facialisparese'
+    effect_16: 'Lungenembolie'
+    effect_17: 'Dermatologische Probleme, Haarausfall'
+    effect_18: 'Herzrhythmusstörungen, Herzrasen, VHFli, Kreislaufbeschwerden'
+    effect_19: 'Appendizitis'
+    effect_20: 'Rheumatologische Pathologie'
+    effect_21: 'Hosp Mediüberdosierung'
+    effect_22: 'Epileptischer Anfall'
+    effect_23: 'Aneurysmaruptur'
+    effect_24: 'Epistaxis'
+
+
+
+
+
+
