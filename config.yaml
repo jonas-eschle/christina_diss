@@ -72,6 +72,15 @@ adversenames:
     effect_23: 'Aneurysmaruptur'
     effect_24: 'Epistaxis'
 
+coordnames:
+  coordbase1: "different disease activity"
+  coordbase2_1: "interval on better eye shortened as situation in\n better eye not stable / already \nrecurrences under extended interval"
+  coordbase2_2: "interval on better eye shortened in case of poor\n general condition/malcompliance or at patient's request"
+  coordbase2_4: "interval on better eye with poorer visual prognosis\n shortened in adjustment to the interval \non worse eye with a better visual prognosis"
+  coordbase3_2: "liquid in worse eye tolerated in case of poor general\n condition/malcompliance or at patient's request"
+  coordbase3_3: "liquid in worse eye tolerated with poor visual prognosis"
+  coordbase3_5: "fluid in worse eye tolerated with stable or slowly\n reabsorbed exudate under prolonged intervals"
+  coordbase4: "equal disease activity"
 
 
 

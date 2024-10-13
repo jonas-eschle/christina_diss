@@ -15,6 +15,7 @@ diagnoses = ['AMD', "DMÖ", 'ZVV_VAV', 'multiple_diagnoses']
 datasets = [pd.read_excel("data_small.xlsx", sheet_name=name).reset_index(drop=True) for name in diagnoses]
 pd.set_option('display.max_columns', None, 'display.max_rows', None, 'display.expand_frame_repr', False)
 diagnoses_name_mapping = config['diagnosesnames']
+coordnames = config['coordnames']
 
 ########################################################################################################################
 # Preprocessing of data
@@ -203,7 +204,7 @@ for changes, nmax in changes_nmax.items():
 
 for change, values in n_collected_all.items():
     print(f"{change}: reasons per patients in percent")
-    print(f"mul etc are datasets, index is the encoding")
+    print("mul etc are datasets, index is the encoding")
     print(pd.DataFrame(values, columns=list(values.keys())))
     print()
 
@@ -366,79 +367,6 @@ print(results_abs)
 #     # print(f'number of ivi {sum(data["n_total"])}')
 plt.show()
 
-
-def pie_diagram(data, name: str):
-    """Pie diagram of the different treatment (coord, bilat t&e, coord diff and no coord)."""
-    n_bilat_te = data['n_bilateral_txe'].sum() * 2  # 2 injections per person
-    n_bilat_teprn = data['n_bilateral_txe_prn'].sum() * 2  # 2 injections per person
-
-    coord_same = data.query('coordination_same_intervall == 1')['n_bilateral_txe'].sum() * 2
-    coord_diff = data.query('coordination_different_intervall == 1')['n_bilateral_txe'].sum() * 2
-    coord_none = data.query('no_coordination == 1')['n_bilateral_txe'].sum() * 2
-    # TODO: horizontal bar diagrams below that show the causes of the different coordination types
-
-
-    all_coord = coord_same + coord_diff + coord_none
-    # hack, what's the right number?
-    n_bilat_te = all_coord
-    assert all_coord == n_bilat_te, f'{all_coord} != {n_bilat_te}'
-
-    # plt.figure(figsize=(10, 10))
-
-    kwargs = dict(autopct='%1.1f%%', textprops={'fontsize': 10},
-                  counterclock=True, startangle=90)
-    double_plot = False
-    if double_plot:
-
-        plt.pie([n_bilat_te,
-                 n_bilat_teprn],
-                labels=['bilat t&e', 'bilat t&e prn'],
-                **kwargs)
-        pie = plt.pie([coord_same,
-                       coord_diff,
-                       coord_none,
-                       n_bilat_teprn],
-                      labels=['coord same', 'coord diff', 'no coord', ''],
-                      **kwargs)
-        # change color of text/bkg in pie for readability
-        for wedge in pie[0]:
-            wedge.set_alpha(0.2)
-        pie[0][-1].set_visible(False)
-    else:
-        _ = plt.pie([coord_same,
-                     coord_diff,
-                     coord_none,
-                     n_bilat_teprn],
-                    labels=['bilateral T&E coordination same interval', 'bilateral T&E coordination different interval',
-                            'bilateral T&E no coordination', 'T&E PRN'],
-                    # colors=['deepskyblue', 'turquoise', 'green', 'red'],
-                    colors=[
-
-                        "#14185c",
-                        "#ffa600",
-                        "#e9484a",
-                        "#951269", ],
-                    labeldistance=None,
-                    **kwargs)
-
-    plt.title(f'{name}')
-
-
-plt.subplots(2, 2, figsize=(10, 10))
-for i, (name, data) in enumerate(name_data_iter):
-    print("=" * linelength)
-    print(f"Data {diagnoses_name_mapping[name]} pie diagram")
-    print("=" * linelength)
-    plt.subplot(2, 2, i + 1)
-    pie_diagram(data, diagnoses_name_mapping[name])
-# plt.suptitle('Pie diagrams of different treatment')
-plt.legend(loc='lower center', bbox_to_anchor=(0.0, -0.2), ncol=2, frameon=False)
-filename = f'pie_diagrams.png'
-output_file = Path(f'plots/pie1') / filename
-output_file.parent.mkdir(parents=True, exist_ok=True)
-plt.savefig(output_file)
-plt.show()
-
 # split by coordination same or different interval
 # and count n_bilateral t&e (times two) for coordination base
 coord_bases = [1, 2, 3, 4, 5]
@@ -447,6 +375,8 @@ coord_reasons_2o3 = [1, 2, 3, 4, 5, 6]
 coords_all_cols = {str(cbase) if coord_bases not in [2, 3] else f'{cbase}_{creason}'
                    for cbase in coord_bases for creason in coord_reasons_2o3}
 coords_all_cols = sorted(coords_all_cols)
+
+dfs_coordbase = [pd.DataFrame() for _ in name_data_iter]
 
 df_coord = pd.DataFrame()
 for name, data in name_data_iter:
@@ -466,8 +396,11 @@ for name, data in name_data_iter:
         colname = f'coordbase{coord_base}'
         base_query = f'coordination_base == {coord_base}'
 
-        for coord_type in ['same', 'different']:
-            df_sel = data.query(f"coordination_{coord_type}_intervall == 1 & {base_query}")
+        for coord_type in ['same', 'different', 'none']:
+            if coord_type == 'none':
+                df_sel = data.query(f"no_coordination == 1 & {base_query}")
+            else:
+                df_sel = data.query(f"coordination_{coord_type}_intervall == 1 & {base_query}")
             rowname = f'{name}_{coord_type}_interval'
             if coord_base in [2, 3]:
                 for row in df_sel.itertuples():
@@ -491,9 +424,10 @@ for name, data in name_data_iter:
                     # print(type(row.coordination_cause), row.coordination_cause)
             else:
                 df_coord.loc[rowname, colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
+df_coord.loc[:, 'coordbase4'] += df_coord.pop('coordbase2_6')
 
-        # for coord_type in ['same', 'different']:
-        #     queried_data = data.query(f"coordination_{coord_type}_intervall == 1 & {base_query}")
+# for coord_type in ['same', 'different']:
+#     queried_data = data.query(f"coordination_{coord_type}_intervall == 1 & {base_query}")
 
 df_coord_out = "Coordination types, n_bilateral_txe * 2 \n" \
                "============================================\n"
@@ -504,6 +438,131 @@ with open(outfile.with_suffix('.txt'), 'w') as f:
     f.write(df_coord_out)
 df_coord.to_excel(outfile.with_suffix('.xlsx'), sheet_name='n_bilateral_txe')
 print(df_coord_out)
+
+
+colorsdiag = [
+    # "#14185c",
+    "#555eff",
+    "#ffa600",
+    "#e9484a",
+    "#951269", ]
+
+
+def pie_diagram(data, name: str):
+    """Pie diagram of the different treatment (coord, bilat t&e, coord diff and no coord)."""
+    n_bilat_te = data['n_bilateral_txe'].sum() * 2  # 2 injections per person
+    n_bilat_teprn = data['n_bilateral_txe_prn'].sum() * 2  # 2 injections per person
+
+    coord_same = data.query('coordination_same_intervall == 1')['n_bilateral_txe'].sum() * 2
+    coord_diff = data.query('coordination_different_intervall == 1')['n_bilateral_txe'].sum() * 2
+    coord_none = data.query('no_coordination == 1')['n_bilateral_txe'].sum() * 2
+    # done: horizontal bar diagrams below that show the causes of the different coordination types
+
+    all_coord = coord_same + coord_diff + coord_none
+    # hack, what's the right number?
+    n_bilat_te = all_coord
+    assert all_coord == n_bilat_te, f'{all_coord} != {n_bilat_te}'
+
+    # plt.figure(figsize=(10, 10))
+
+    kwargs = dict(autopct=lambda x: f'{int(x * all_coord / 100)} ({x / 100:.1%})', textprops={'fontsize': 10},
+                  counterclock=True, startangle=90)
+    double_plot = False
+    if double_plot:
+
+        plt.pie([n_bilat_te,
+                 n_bilat_teprn],
+                labels=['bilat t&e', 'bilat t&e prn'],
+                **kwargs)
+        pie = plt.pie([coord_same,
+                       coord_diff,
+                       coord_none,
+                       n_bilat_teprn],
+                      labels=['coord same', 'coord diff', 'no coord', ''],
+                      **kwargs)
+        # change color of text/bkg in pie for readability
+        for wedge in pie[0]:
+            wedge.set_alpha(0.2)
+        pie[0][-1].set_visible(False)
+    else:
+
+        _ = plt.pie([coord_same,
+                     coord_diff,
+                     coord_none,
+                     n_bilat_teprn],
+                    labels=['bilateral T&E coordination same interval', 'bilateral T&E coordination different interval',
+                            'bilateral T&E no coordination', 'T&E PRN'],
+                    # colors=['deepskyblue', 'turquoise', 'green', 'red'],
+                    colors=colorsdiag,
+                    labeldistance=None,
+                    **kwargs)
+
+    plt.title(f'{name}')
+
+
+cols = 2
+rows = 4
+plotnrpie = {0: 1, 1: 2, 2: 5, 3: 6}
+plotnrbar = {0: 3, 1: 4, 2: 7, 3: 8}
+plt.subplots(rows, cols, figsize=(20, 20), height_ratios=[7, 8 / 3, 7, 1])
+
+
+
+def plot_barh(data, coordcolnames: list[str], name: str, invert=False):
+    # n_bilat_teprn = data['n_bilateral_txe_prn'].sum() * 2  # 2 injections per person
+
+    coordlabels = [coordnames[col] for col in coordcolnames]
+    left = np.zeros((len(coordcolnames),))
+
+    coords = ['same', 'different', 'none']
+    for coord, color in zip(coords, colorsdiag[:-1]):
+        diff = [data.loc[f'{name}_{coord}_interval', col] for col in coordcolnames]
+
+        plt.barh(coordlabels, left + diff, color=color, left=left)
+        if invert:
+            # plt.gca().yaxis.tick_right()
+            plt.gca().tick_params(axis='both', which='major', labelsize=6)
+            plt.gca().invert_xaxis()
+        left += diff
+
+
+coordcolnames = [
+    "coordbase4",
+    "coordbase2_1",
+    "coordbase2_2",
+    "coordbase2_4",
+    "coordbase3_2",
+    "coordbase3_3",
+    "coordbase3_5",
+    "coordbase1",
+]
+coordcolnames.reverse()
+coordcols = coordcolnames
+for i, (name, data) in enumerate(name_data_iter):
+    if i >= 2:
+        coordcols = [n for i, n in enumerate(coordcolnames) if i in (0, 5, 7)]
+    print("=" * linelength)
+    print(f"Data {diagnoses_name_mapping[name]} pie diagram")
+    print("=" * linelength)
+    plt.subplot(rows, cols, plotnrpie[i])
+    pie_diagram(data, diagnoses_name_mapping[name])
+
+    plt.subplot(rows, cols, (ploti := plotnrbar[i]))
+    if ploti in (4, 8):  # right hbar, no labels
+        plt.gca().set_yticklabels([])
+    plot_barh(df_coord, coordcols, name, invert=i % 2 == 0)
+# plt.suptitle('Pie diagrams of different treatment')
+
+plt.subplot(rows, cols, 6)
+plt.legend(
+    loc='lower center',
+    bbox_to_anchor=(-0.15, -0.5),
+    ncol=2, frameon=False)
+filename = 'pie_diagrams.png'
+output_file = Path('plots/pie1') / filename
+output_file.parent.mkdir(parents=True, exist_ok=True)
+plt.savefig(output_file)
+# plt.show()
 
 # get number of bilateral, unilateral and n_patients for all four diagnoses and the two medication types
 cfg_general = config['data_general']
@@ -517,7 +576,7 @@ for name, data in name_data_iter:
     df_general.loc['n_patients', name] = data.shape[0]
     for i, medication in enumerate(medications):
         df_general.loc['bilat', medication] += data[f'n_bilateral_{medication}'].sum() * 2
-        df_general.loc['bilat', medication] += data[f'n_bilateral_lucentis_eylea'].sum()  # each on for each eye
+        df_general.loc['bilat', medication] += data['n_bilateral_lucentis_eylea'].sum()  # each on for each eye
         df_general.loc['unilat', medication] += data[f'n_unilateral_{medication}'].sum()
         df_general.loc['n_patients', medication] += \
             data.query(f'n_{medication}_total >= n_{medications[(i + 1) % 2]}_total').shape[0]
@@ -555,7 +614,6 @@ for adverse_type in ['ocular', 'systemic']:
     df_adverse = pd.DataFrame(index=lateralities, columns=[f'effect_{i + 1}' for i in range(neffects[adverse_type])])
     df_adverse.fillna(0, inplace=True)
     dfs[adverse_type] = df_adverse
-
 
     for name, data in name_data_iter:
         for laterality in lateralities:
@@ -613,7 +671,7 @@ columns = [
     'avg_age',
     'n_patients',
     'n_injections',
-    'male_female_ratio_percent',
+    'male_female_percent',
     'n_unilateral',
     'n_bilateral',
     'delta_bcva',
@@ -633,9 +691,12 @@ for name, data in name_data_iter:
     df_summary.loc[name, 'n_patients'] = n_patients
     df_summary.loc[name, 'n_injections'] = data['n_total'].sum()
     # female is 1, male is 2
-    # TODO: change to nmale (perc_nmale)/ nfemale (perc_nfemale)
-    df_summary.loc[name, 'male_female_ratio_percent'] = round(np.sum(data['sex'] == 2) / np.sum(data['sex'] == 1) * 100,
-                                                              0)
+    # done: change to nmale (perc_nmale)/ nfemale (perc_nfemale)
+    nmale = np.sum(data['sex'] == 2)
+    nfemale = np.sum(data['sex'] == 1)
+    ntot = nmale + nfemale
+    female_male_string = f'{nmale} ({nmale / ntot:.1%}) / {nfemale} ({nfemale / ntot:.1%})'
+    df_summary.loc[name, 'male_female_percent'] = female_male_string
     df_summary.loc[name, 'n_unilateral'] = data['n_unilateral'].sum()
     df_summary.loc[name, 'n_bilateral'] = data['n_bilateral'].sum()
     for medication in medications:
@@ -654,3 +715,17 @@ with open(outfile.with_suffix('.txt'), 'w') as f:
     f.write(df_summary_out)
 
 df_summary.to_excel(outfile.with_suffix('.xlsx'), sheet_name='summary')
+
+
+# TODO: check if higher chance that multiple adverse events (poisson?)
+# TODO: correlation of diabetes + 2 more mit adverse events per patient
+# TODO: unilateral vs bilateral: adverse events per injections (or per two injections?)
+# TODO: correlation of number of bilateral/unilateral with number of adversarial events
+
+# TODO: more columns in table, christina will provide more
+
+# TODO: round df_*_percent to 3 digits
+
+# TODO: number and percent, christina will provide
+
+# TODO: plots in grey, no colors
