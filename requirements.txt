@@ -1,0 +1,9 @@
+matplotlib
+numpy
+openpyxl
+pandas
+pyyaml
+scipy
+zfit
+mplhep
+hist

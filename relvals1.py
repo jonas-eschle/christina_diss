@@ -1,14 +1,19 @@
 from collections import Counter
 from pathlib import Path
 
+import hist
 import matplotlib.pyplot as plt
+import mplhep
 import numpy as np
 import pandas as pd
+import scipy.stats
 import yaml
 
 # load config yaml
 with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
+# manual config, change digits of percent if needed
+perc_formatstr = '{:#.2g}'.format
 
 diagnoses = ['AMD', "DMÖ", 'ZVV_VAV', 'multiple_diagnoses']
 # diagnoses.reverse()
@@ -53,7 +58,7 @@ name_data_iter = list(zip(diagnoses, datasets))
 
 def str_mean_std(data: pd.Series, percent=False):
     factor = 100 if percent else 1
-    out = f'{data.mean() * factor:.3g} +- {data.std() * factor / data.shape[0] ** 0.5:.2g}'
+    out = f'{data.mean() * factor:#.3g} +- {data.std() * factor / data.shape[0] ** 0.5:#.2g}'
     if percent:
         out += '%'
     return out
@@ -69,6 +74,8 @@ n_col_std_all = {}
 print(":" * linelength)
 print("Medication")
 print(":" * linelength)
+
+# TODO: occular adverse effects: occular_AE, hyposphagma, sicca, allergy, iod
 for name, data in name_data_iter:
     n_collected = {}
     n_collected_std = {}
@@ -108,11 +115,11 @@ for name, data in name_data_iter:
 
     n_col_all[name] = n_collected
     n_col_std_all[name] = n_collected_std
-n_col_all = {k: {k2: f'{v:.4g} +- {n_col_std_all[k][k2]:.2g}' for k2, v in v.items()} for k, v in n_col_all.items()}
+n_col_all = {k: {k2: f'{v:#.4g} +- {n_col_std_all[k][k2]:#.2g}' for k2, v in v.items()} for k, v in n_col_all.items()}
 
 print("Injections by med_lat")
-injections_med_lat = pd.DataFrame({k: v.values() for k, v in n_col_all.items()},
-                                  index=list(n_col_all.values())[0].keys())
+injections_med_lat = pd.DataFrame({k: v.values()
+                                   for k, v in n_col_all.items()}, index=list(n_col_all.values())[0].keys())
 print(injections_med_lat)
 
 print("\n\n\n")
@@ -163,7 +170,7 @@ for name, data in name_data_iter:
     plt.close()
     n_col_all[name] = n_collected
     n_col_std_all[name] = n_collected_std
-n_col_all = {k: {k2: f'{v:.3g} +- {n_col_std_all[k][k2]:.2g}' for k2, v in v.items()} for k, v in n_col_all.items()}
+n_col_all = {k: {k2: f'{v:#.3g} +- {n_col_std_all[k][k2]:#.2g}' for k2, v in v.items()} for k, v in n_col_all.items()}
 print(pd.DataFrame({k: v.values() for k, v in n_col_all.items()}, index=list(n_col_all.values())[0].keys()))
 
 print("\n\n\n")
@@ -287,7 +294,7 @@ for name, data in name_data_iter:
                 ntot = df["n_total"].sum()
                 percent_val = n_have_it / ntot
                 results.loc[
-                    (name, medication, lat), adverse_name] = f'{percent_val:.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
+                    (name, medication, lat), adverse_name] = f'{percent_val:#.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
                 results_abs.loc[(name, medication, lat), adverse_name] = f'{n_have_it} +- {n_have_it ** 0.5:.1f}'
 
 print("Adverse effects per data in percent of total injections")
@@ -440,13 +447,28 @@ df_coord.to_excel(outfile.with_suffix('.xlsx'), sheet_name='n_bilateral_txe')
 print(df_coord_out)
 
 
-colorsdiag = [
-    # "#14185c",
-    "#555eff",
-    "#ffa600",
-    "#e9484a",
-    "#951269", ]
+# colorsdiag = [
+#     # "#14185c",
+#     "#555eff",
+#     "#ffa600",
+#     "#e9484a",
+#     "#951269", ]
+colorsdiag = plt.cm.gray([0.7, 0.55, 0.9, 0.4])
 
+# hatches = ['/', '\\', '|', '-', '+', 'x', 'o', 'O', '.', '*']
+# hatches = [
+#     '/',
+#     '\\',
+#     '+',
+#     'o',
+# ]
+hatchesbar = [
+    '/',
+    '\\',
+    '+',
+    'o',
+]
+hatches = None
 
 def pie_diagram(data, name: str):
     """Pie diagram of the different treatment (coord, bilat t&e, coord diff and no coord)."""
@@ -486,15 +508,27 @@ def pie_diagram(data, name: str):
         pie[0][-1].set_visible(False)
     else:
 
-        _ = plt.pie([coord_same,
-                     coord_diff,
-                     coord_none,
-                     n_bilat_teprn],
-                    labels=['bilateral T&E coordination same interval', 'bilateral T&E coordination different interval',
-                            'bilateral T&E no coordination', 'T&E PRN'],
+        datatoplot = [coord_same,
+                  coord_diff,
+                  coord_none,
+                  n_bilat_teprn]
+        labelstoplot = ['bilateral T&E coordination same interval', 'bilateral T&E coordination different interval',
+                'bilateral T&E no coordination', 'T&E and PRN']
+        colorstoplot = colorsdiag
+        datacleaned = []
+        labelscleaned = []
+        colorscleaned = []
+        for i, d in enumerate(datatoplot):
+            if d > 0:
+                datacleaned.append(d)
+                labelscleaned.append(labelstoplot[i])
+                colorscleaned.append(colorstoplot[i])
+        _ = plt.pie(datacleaned,
+                    labels=labelscleaned,
                     # colors=['deepskyblue', 'turquoise', 'green', 'red'],
-                    colors=colorsdiag,
+                    colors=colorscleaned,
                     labeldistance=None,
+                    hatch=hatches,
                     **kwargs)
 
     plt.title(f'{name}')
@@ -504,6 +538,7 @@ cols = 2
 rows = 4
 plotnrpie = {0: 1, 1: 2, 2: 5, 3: 6}
 plotnrbar = {0: 3, 1: 4, 2: 7, 3: 8}
+
 plt.subplots(rows, cols, figsize=(20, 20), height_ratios=[7, 8 / 3, 7, 1])
 
 
@@ -515,10 +550,10 @@ def plot_barh(data, coordcolnames: list[str], name: str, invert=False):
     left = np.zeros((len(coordcolnames),))
 
     coords = ['same', 'different', 'none']
-    for coord, color in zip(coords, colorsdiag[:-1]):
+    for coord, color, hatch in zip(coords, colorsdiag[:-1], hatchesbar):
         diff = [data.loc[f'{name}_{coord}_interval', col] for col in coordcolnames]
 
-        plt.barh(coordlabels, left + diff, color=color, left=left)
+        plt.barh(coordlabels, left + diff, color=color, left=left, hatch=hatch)
         if invert:
             # plt.gca().yaxis.tick_right()
             plt.gca().tick_params(axis='both', which='major', labelsize=6)
@@ -558,6 +593,32 @@ plt.legend(
     loc='lower center',
     bbox_to_anchor=(-0.15, -0.5),
     ncol=2, frameon=False)
+filename = 'pie_diagrams_bars.png'
+output_file = Path('plots/pie1') / filename
+output_file.parent.mkdir(parents=True, exist_ok=True)
+plt.savefig(output_file)
+
+# only pie diagrams
+ncols = 2
+nrows = 2
+plt.subplots(nrows, ncols, figsize=(20, 20))
+for i, (name, data) in enumerate(name_data_iter):
+    plt.subplot(nrows, ncols, i + 1)
+    pie_diagram(data, diagnoses_name_mapping[name])
+
+    # plt.subplot(rows, cols, (ploti := plotnrbar[i]))
+    # if ploti in (4, 8):  # right hbar, no labels
+    #     plt.gca().set_yticklabels([])
+    # plot_barh(df_coord, coordcols, name, invert=i % 2 == 0)
+# plt.suptitle('Pie diagrams of different treatment')
+
+plt.subplot(nrows, ncols, 3)
+plt.legend(
+    loc='upper right',
+    bbox_to_anchor=(1.35, 1.2),
+    # ncol=2,
+    frameon=False
+)
 filename = 'pie_diagrams.png'
 output_file = Path('plots/pie1') / filename
 output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -610,13 +671,19 @@ neffects = {'ocular': 22, 'systemic': 24}
 # make number to effect mapping
 effect_mapping = {}
 
+def n_adverse_from_list_of_types(x):
+    return sum([int(y) > 0 for y in str(x).replace(',', '').replace('  ', ' ').split(' ')])
+
 for adverse_type in ['ocular', 'systemic']:
     df_adverse = pd.DataFrame(index=lateralities, columns=[f'effect_{i + 1}' for i in range(neffects[adverse_type])])
     df_adverse.fillna(0, inplace=True)
     dfs[adverse_type] = df_adverse
 
+
     for name, data in name_data_iter:
         for laterality in lateralities:
+            # count the number of adverse events
+            data[f'n_{adverse_type}_ae_{laterality}'] = data[f'{adverse_type}_ae_{laterality}'].apply(lambda x: n_adverse_from_list_of_types(x))
             adv_counter = Counter()
             for row in data.itertuples():
                 effects = str(getattr(row, f'{adverse_type}_ae_{laterality}'))
@@ -628,10 +695,9 @@ for adverse_type in ['ocular', 'systemic']:
             for effect, count in adv_counter.items():
                 df_adverse.loc[laterality, f'effect_{effect}'] += count
 
-rename_mapping_ocular = config['adversenames']['ocular']
-dfs['ocular'].rename(columns=rename_mapping_ocular, inplace=True)
-rename_mapping_systemic = config['adversenames']['systemic']
-dfs['systemic'].rename(columns=rename_mapping_systemic, inplace=True)
+for adverse_type in ['ocular', 'systemic']:
+    rename_mapping = config['adversenames'][adverse_type]
+    dfs[adverse_type].rename(columns=rename_mapping, inplace=True)
 for df in dfs.values():
     df['total'] = df.sum(axis=1)
 
@@ -661,9 +727,13 @@ for dfs_use, normalized in zip([dfs, dfs_normalized], [False, True]):
         for transpose in True, False:
             file = Path(str(outfile) + f'_{adv_type}{"_transposed" if transpose else ""}')
             df_tmp = df
+            if normalized:
+
+                df_tmp = df_tmp.map(perc_formatstr)
             if transpose:
                 df_tmp = df.transpose()
             df_tmp.to_excel(file.with_suffix('.xlsx'), sheet_name=adv_type)
+
 
 # dump summary statistics of all four datasets
 
@@ -705,6 +775,8 @@ for name, data in name_data_iter:
         df_summary.loc[name, f'n_{medication}_bilateral'] = data[f'n_bilateral_{medication}'].sum()
     df_summary.loc[name, 'delta_bcva'] = round(data['bcva_sum_diff'].mean(), 3)
 
+n_injections = pd.Series({'unilateral': df_summary['n_unilateral'].sum(),
+                          'bilateral': df_summary['n_bilateral'].sum()})
 df_summary.rename(columns=config['data_general']['columnnames'], index=diagnoses_name_mapping, inplace=True)
 # df_summary.rename(, inplace=True)
 df_summary_out = str(df_summary)
@@ -716,16 +788,191 @@ with open(outfile.with_suffix('.txt'), 'w') as f:
 
 df_summary.to_excel(outfile.with_suffix('.xlsx'), sheet_name='summary')
 
+from scipy.stats import binom as binomsp
+
+for advtype in ['ocular', 'systemic']:
+    df = dfs[advtype]
+    n_unilat = n_injections['unilateral']
+    p_unilat = df.loc['unilateral'] / n_unilat
+    n_bilat = n_injections['bilateral'] * 2  # two eyes
+    p_bilat = df.loc['bilateral'] / n_bilat
+    ptot = (n_unilat * p_unilat + n_bilat * p_bilat) / (n_unilat + n_bilat)
+    z = (p_unilat - p_bilat) / (ptot * (1 - ptot) * (1 / n_unilat + 1 / n_bilat)) ** 0.5
+    z = pd.DataFrame({'p value': scipy.stats.norm.sf(np.abs(z)) *2}, #twosided
+                     index=z.index)
+    nadv = ptot.shape[0]
+    dftmp = pd.DataFrame({'proba bilateral': p_bilat, 'proba unilateral': p_unilat,
+               'n_bilateral': [n_bilat] * nadv, 'n_unilateral': [n_unilat] * nadv, 'p_total': ptot})
+    dfadvtest = pd.concat([z, df.loc['unilateral'], df.loc['bilateral'], dftmp], axis=1)
+    print(f"Adverse events {advtype} test statistics")
+    print(dfadvtest)
+    with open(Path('outputs') / f'df_adverse_{advtype}_teststatistic.txt', 'w') as f:
+        f.write(str(dfadvtest))
+    dfadvtest.to_excel(Path('outputs') / f'df_adverse_{advtype}_teststatistic.xlsx', sheet_name='teststatistic')
+
+
+dataall = pd.concat(datasets, ignore_index=True).reset_index(drop=True)
+nmax = 10  # TODO, how many?
+bins = None
+ntot_ae = None
+nmin = 0
+x = np.linspace(nmin, nmax, nmax + 1)
+def plot_data_pdf(ps, title, data):
+    if not isinstance(ps, list):
+        ps = [ps]
+    global x, bins
+    plt.figure()
+    plt.title(title)
+    nbins = 50
+    h = hist.Hist.new.Reg(nbins, nmin, nmax).Double()
+    h.fill(data)
+    bins, edges, fig = plt.hist(data, bins=50, density=True, alpha=0.5)
+    # mplhep.histplot(h, histtype='errorbar', color='k', label='data', alpha=0.5, yerr=True)
+    # ntot_ae = np.sum(bins)
+    for i, p in enumerate(ps):
+        if i == 0:
+            label = 'binom pmf'
+            fmt = 'b-'
+        elif i == 1:
+            label = r'$ + 1 \sigma $'
+            fmt = 'r--'
+        elif i == 2:
+            label = r'$ - 1 \sigma $'
+            fmt = 'r--'
+        elif i == 3:
+            label = r'$ + 2 \sigma $'
+            fmt = 'y-.'
+        elif i == 4:
+            label = r'$ - 2 \sigma $'
+            fmt = 'y-.'
+        else:
+            raise ValueError("Too many ps")
+        plt.plot(x, np.sum(bins) * binomsp.pmf(x, nmax, p), fmt, label=label)
+    plt.xlabel('Number of adverse events')
+    plt.ylabel('# patients')
+    plt.legend()
+    outpath = Path('plots') / 'stats' / 'fits'
+    outpath.mkdir(parents=True, exist_ok=True)
+    plt.savefig(outpath / f'{title.replace(" ", "_")}.png')
+    plt.show()
+
+
+
+
+def create_loss(data, n):
+    def pdf(x, p):
+        return np.maximum(binomsp.pmf(x, n, p), 1e-10)
+
+    def nll(p):  # binned poisson loss
+        return -np.sum(np.log(pdf(data, p)))
+
+    nll.errordef = 0.5
+
+    return nll
+
+# TODO: mix ocular & systemic adverse events (one dataset)
+datafit = dataall['n_ocular_ae_bilateral']
+ntot_ae = datafit.sum()
+nll = create_loss(datafit, nmax)
+
+import zfit
+zfit.run.set_autograd_mode(False)
+zfit.run.set_graph_mode(False)
+
+p = zfit.Parameter("p", 0.02, 0, 1)
+plot_data_pdf(p, title="Before fit", data =datafit)
+minimizer = zfit.minimize.Minuit()
+result = minimizer.minimize(nll, p).update_params()
+result.hesse()
+result.errors()
+print(result)
+plot_data_pdf(p, title="After fit", data=datafit)
+pval = result.params[p]['value']
+upper = result.params[p]['errors']['upper']
+lower = result.params[p]['errors']['lower']
+plot_data_pdf([pval, pval + upper, pval + lower, pval + 2 * upper, pval - 2 * lower],
+              title="After fit", data=datafit)
+
+asimov = binomsp.rvs(size=int(ntot_ae) *1, n=nmax, p=p)  # TODO: asimov?
+nll_asimov = create_loss(asimov, nmax)
+result_asimov = minimizer.minimize(nll_asimov, p).update_params()
+result_asimov.hesse()
+result_asimov.errors()
+print(result_asimov)
+pval = result_asimov.params[p]['value']
+plot_data_pdf([pval, pval + result_asimov.params[p]['errors']['upper'], pval + result_asimov.params[p]['errors']['lower']], title="Asimov fit", data=asimov)
 
 # TODO: check if higher chance that multiple adverse events (poisson?)
+
 # TODO: correlation of diabetes + 2 more mit adverse events per patient
-# TODO: unilateral vs bilateral: adverse events per injections (or per two injections?)
-# TODO: correlation of number of bilateral/unilateral with number of adversarial events
+
+
+# Done below: unilateral vs bilateral: adverse events per injections (or per two injections?)
+occular_occ = dfs['ocular'].sum(axis=1).to_frame("oculartotal")
+nunilat = df_summary['# unilateral'].sum()
+nbilat = df_summary['# bilateral'].sum() * 2
+occular_occ.loc['bilateral', '# injections'] = nbilat
+occular_occ.loc['unilateral', '# injections'] = nunilat
+
+occular_occ['relsig_adv'] = occular_occ['oculartotal'] ** 0.5 / occular_occ['oculartotal']
+occular_occ['rel_adv'] = occular_occ['oculartotal'] / occular_occ['# injections']
+occular_occ['sig_adv'] = occular_occ['relsig_adv'] * occular_occ['rel_adv']
+
+for lat in ['bilateral', 'unilateral']:
+    rel_adv_per_bilat = occular_occ.loc[lat, 'rel_adv']
+    sig_adv_per_bilat = occular_occ.loc[lat, 'sig_adv']
+    print(f"Ocular adv per {lat} injection {rel_adv_per_bilat:.3f} +- {sig_adv_per_bilat:.3f}")
+
+import scipy.stats
+# Done below: correlation of number of bilateral/unilateral with number of adversarial events
+# TODO: ocular correlation with systemic
+
+corr_and_sig = {}
+corr_and_sig_tot = {}
+alldata_n_adverse = pd.DataFrame()
+for lat in ['bilateral', 'unilateral']:  # no *2 needed for bilateral as we're only looking at the rank correlation
+    for adv_type in ['ocular', 'systemic']:
+        alldata_n_adverse_adv_lat = pd.DataFrame()
+        alldata_n_injections = pd.DataFrame()
+        for name, data in name_data_iter:
+            n_adverse = data[f'n_{adv_type}_ae_{lat}']
+            n_injections = data[f'n_{lat}']
+            hasinj = n_injections > -1  # no selection
+            n_adverse = n_adverse[hasinj]
+            n_injections = n_injections[hasinj]
+            alldata_n_injections = pd.concat([alldata_n_injections, n_injections])
+            alldata_n_adverse_adv_lat = pd.concat([alldata_n_adverse_adv_lat, n_adverse])
+            spearmancorr = scipy.stats.spearmanr(n_adverse, n_injections)
+
+
+            corr_and_sig[(name, adv_type, lat)] = spearmancorr
+        spearmancorrtot = scipy.stats.spearmanr(alldata_n_adverse_adv_lat, alldata_n_injections)
+        corr_and_sig_tot[(adv_type, lat)] = spearmancorrtot
+        alldata_n_adverse[f'n_{adv_type}_ae_{lat}'] = alldata_n_adverse_adv_lat[f'n_{adv_type}_ae_{lat}']
+
+# TODO: ocular correlation with systemic
+for lat in ['bilateral', 'unilateral']:  # TODO
+    spearmanncorr = scipy.stats.spearmanr(alldata_n_adverse[f'n_ocular_ae_{lat}'], alldata_n_adverse[f'n_systemic_ae_{lat}'])
+    print(f"Total ocular/systemic {lat} (spearman) correlation: {spearmanncorr.statistic:.2f} p-value: {spearmanncorr.pvalue:.2g}")
+
+for name in diagnoses:
+    for adv_type in ['ocular', 'systemic']:
+        for lat in ['bilateral', 'unilateral']:
+            spearmancorr = corr_and_sig[(name, adv_type, lat)]
+            print(f"{name} {adv_type} {lat} (spearman) correlation: {spearmancorr.statistic:.2f} "
+                  f"p-value: {spearmancorr.pvalue:.2g}")
+
+for adv_type in ['ocular', 'systemic']:
+    for lat in ['bilateral', 'unilateral']:
+        spearmancorrtot = corr_and_sig_tot[(adv_type, lat)]
+        print(f"Total {adv_type} {lat} (spearman) correlation: {spearmancorrtot.statistic:.2f} "
+              f"p-value: {spearmancorrtot.pvalue:.2g}")
+
 
 # TODO: more columns in table, christina will provide more
 
-# TODO: round df_*_percent to 3 digits
+# Done: how many digits? round df_*_percent to 3 digits
 
 # TODO: number and percent, christina will provide
 
-# TODO: plots in grey, no colors
+# Done: hatch? plots in grey, no colors
