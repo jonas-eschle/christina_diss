@@ -16,6 +16,7 @@ with open("config.yaml", "r") as file:
 perc_formatstr = '{:#.2g}'.format
 
 diagnoses = ['AMD', "DMÖ", 'ZVV_VAV', 'multiple_diagnoses']
+lateralities = ['bilateral', 'unilateral']
 # diagnoses.reverse()
 datasets = [pd.read_excel("data_small.xlsx", sheet_name=name).reset_index(drop=True) for name in diagnoses]
 pd.set_option('display.max_columns', None, 'display.max_rows', None, 'display.expand_frame_repr', False)
@@ -75,7 +76,6 @@ print(":" * linelength)
 print("Medication")
 print(":" * linelength)
 
-# TODO: occular adverse effects: occular_AE, hyposphagma, sicca, allergy, iod
 for name, data in name_data_iter:
     n_collected = {}
     n_collected_std = {}
@@ -259,9 +259,62 @@ adverse_effects_cut = {"uni":
 
 print("\n\n\n")
 
+# lateral = ['uni', 'bi']
+# index = pd.MultiIndex.from_product([diagnoses, medications, lateral])
+# adverse_eff = ['hyposphagma', 'sicca', 'allergy']
+# adverse_hypo = {
+#     1: "unilat_non-antikoag",
+#     2: "unilat_antikoag",
+#     3: "bilat_non-antikoag",
+#     4: "bilat_antikoag"}
+# shifts_med = {'eylea': 4, 'lucentis': 0}
+# # shifts_lat = {'uni': 0, 'bi': 2}
+# results = pd.DataFrame(index=index, columns=adverse_hypo.values())
+# results_abs = pd.DataFrame(index=index, columns=adverse_hypo.values())
+# for name, data in name_data_iter:
+#     print("=" * linelength)
+#     print(f"Data {diagnoses_name_mapping[name]} adverse effects")
+#     print("=" * linelength)
+#     n_collected = {}
+#     n_collected_std = {}
+#
+#     df = data.copy()
+#     for medication in medications:
+#         for lat in lateral:
+#             key = f'_{medication[:3]}_{lat}'
+#             # shift_lat = shifts_lat[lat]
+#             shift = shifts_med[medication]
+#             for i, adverse_name in adverse_hypo.items():
+#                 series_sel = df[f'hyposphagma_{lat}lateral']
+#                 series_sel = series_sel.apply(lambda x: x[0] if isinstance(x, (list, tuple)) else x)
+#                 if not series_sel.dtype == 'int64':
+#                     pass
+#                 have_it = (series_sel == i + shift)
+#                 n_have_it = have_it.sum()
+#                 ntot = df["n_total"].sum()
+#                 percent_val = n_have_it / ntot
+#                 results.loc[
+#                     (name, medication, lat), adverse_name] = f'{percent_val:#.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
+#                 results_abs.loc[(name, medication, lat), adverse_name] = f'{n_have_it} +- {n_have_it ** 0.5:.1f}'
+#
+# print("Adverse effects per data in percent of total injections")
+# print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
+#       "\n(medication, uni/bilateral injection taken from table name/encoding)")
+# print(results)
+#
+# print("Adverse effects per data in absolute numbers")
+# print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
+#       "\n(medication, uni/bilateral injection taken from table name/encoding)")
+# print(results_abs)
+
+print("\n\n\n")
+
 lateral = ['uni', 'bi']
 index = pd.MultiIndex.from_product([diagnoses, medications, lateral])
-adverse_eff = ['hyposphagma', 'sicca', 'allergy']
+adverse_eff = {'hyposphagma': 'hyposphagma_{lat}lateral > 0',
+               'sicca': 'sicca_{lat}lateral > 0',
+               # 'allergy': 'allergy_{lat}lateral > 0'
+               }
 adverse_hypo = {
     1: "unilat_non-antikoag",
     2: "unilat_antikoag",
@@ -286,58 +339,7 @@ for name, data in name_data_iter:
             shift = shifts_med[medication]
             for i, adverse_name in adverse_hypo.items():
                 series_sel = df[f'hyposphagma_{lat}lateral']
-                series_sel = series_sel.apply(lambda x: x[0] if isinstance(x, (list, tuple)) else x)
-                if not series_sel.dtype == 'int64':
-                    pass
-                have_it = (series_sel == i + shift)
-                n_have_it = have_it.sum()
-                ntot = df["n_total"].sum()
-                percent_val = n_have_it / ntot
-                results.loc[
-                    (name, medication, lat), adverse_name] = f'{percent_val:#.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
-                results_abs.loc[(name, medication, lat), adverse_name] = f'{n_have_it} +- {n_have_it ** 0.5:.1f}'
-
-print("Adverse effects per data in percent of total injections")
-print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
-      "\n(medication, uni/bilateral injection taken from table name/encoding)")
-print(results)
-
-print("Adverse effects per data in absolute numbers")
-print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
-      "\n(medication, uni/bilateral injection taken from table name/encoding)")
-print(results_abs)
-
-print("\n\n\n")
-
-lateral = ['uni', 'bi']
-index = pd.MultiIndex.from_product([diagnoses, medications, lateral])
-adverse_eff = {'hyposphagma': 'hyposphagma_{lat}lateral > 0',
-               'sicca': 'sicca_{lat}lateral > 0', 'allergy': 'allergy_{lat}lateral > 0'}
-# adverse_hypo = {
-#     1: "unilat_non-antikoag",
-#     2: "unilat_antikoag",
-#     3: "bilat_non-antikoag",
-#     4: "bilat_antikoag"}
-shifts_med = {'eylea': 4, 'lucentis': 0}
-# shifts_lat = {'uni': 0, 'bi': 2}
-results = pd.DataFrame(index=index, columns=adverse_hypo.values())
-results_abs = pd.DataFrame(index=index, columns=adverse_hypo.values())
-for name, data in name_data_iter:
-    print("=" * linelength)
-    print(f"Data {diagnoses_name_mapping[name]} adverse effects")
-    print("=" * linelength)
-    n_collected = {}
-    n_collected_std = {}
-
-    df = data.copy()
-    for medication in medications:
-        for lat in lateral:
-            key = f'_{medication[:3]}_{lat}'
-            # shift_lat = shifts_lat[lat]
-            shift = shifts_med[medication]
-            for i, adverse_name in adverse_hypo.items():
-                series_sel = df[f'hyposphagma_{lat}lateral']
-                series_sel = series_sel.apply(lambda x: x[0] if isinstance(x, (list, tuple)) else x)
+                series_sel = series_sel.apply(lambda x: i if (isinstance(x, (list, tuple)) and i in x) else x)
                 if not series_sel.dtype == 'int64':
                     pass
                 have_it = (series_sel == i + shift)
@@ -348,6 +350,8 @@ for name, data in name_data_iter:
                     (name, medication, lat), adverse_name] = f'{percent_val:.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
                 results_abs.loc[(name, medication, lat), adverse_name] = f'{n_have_it} +- {n_have_it ** 0.5:.1f}'
 
+
+
 print("Adverse effects per data in percent of total injections")
 print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
       "\n(medication, uni/bilateral injection taken from table name/encoding)")
@@ -357,6 +361,127 @@ print("Adverse effects per data in absolute numbers")
 print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
       "\n(medication, uni/bilateral injection taken from table name/encoding)")
 print(results_abs)
+# save results
+adversedir = Path('outputs/adverse_effects')
+adversedir.mkdir(parents=True, exist_ok=True)
+outfile_hyposphagma = adversedir / 'hyposphagma'
+out = "Adverse effects, per data in percent of total injections \n" \
+        "====================================================\n"
+out += str(results_abs)
+
+outfile_hyposphagma.with_suffix('.txt').write_text(out)
+
+results_abs.to_excel(outfile_hyposphagma.with_suffix('.xlsx'), sheet_name='hyposphagma')
+
+
+# add subcategories for hyposhagma and IOD. Looks similar to above, but is different
+lateral = ['uni', 'bi']
+index = pd.MultiIndex.from_product([diagnoses, medications, lateral])
+adverse_eff = {'hyposphagma': 'hyposphagma_{lat}lateral > 0',
+               # 'sicca': 'sicca_{lat}lateral > 0',
+               # 'allergy': 'allergy_{lat}lateral > 0',
+               'iod': 'iod_{lat}lateral > 0',
+               }
+
+hypo_iods = ['hypo_antikoag', 'hypo_nonanti', 'IOD_no_Glaukom', 'IOD_with_Glaukom']
+allergy_causes =  [f'allergy_{i}' for i in range(1, 7)]
+columns = [f'{eff}_{lat}' for eff in hypo_iods + allergy_causes for lat in lateralities]
+index = diagnoses
+results2 = pd.DataFrame(index=index, columns=columns).fillna(0.)
+results_abs2 = pd.DataFrame(index=index, columns=columns).fillna(0.)
+for name, data in name_data_iter:
+    print("=" * linelength)
+    print(f"Data {diagnoses_name_mapping[name]} adverse effects")
+    print("=" * linelength)
+    n_collected = {}
+    n_collected_std = {}
+
+    df = data.copy()
+    colname = '{adverse}_{lat}'
+    for i, (eff, query) in enumerate(adverse_eff.items()):
+        # df = data.query(query)
+        evenname = hypo_iods[(i * 2)]
+        oddname = hypo_iods[(i * 2) + 1]
+
+        for j in range(10):
+            if j == 0:
+                # for lat in lateralities:
+                #     results_abs2.loc[name, colname.format(adverse=evenname, lat=lat)] = 0
+                #     results_abs2.loc[name, colname.format(adverse=oddname, lat=lat)] = 0
+                #     results2.loc[name, colname.format(adverse=evenname, lat=lat)] = 0
+                #     results2.loc[name, colname.format(adverse=oddname, lat=lat)] = 0
+                continue
+            if j % 2 == 0:
+                adverse_name = evenname
+            else:
+                adverse_name = oddname
+
+
+
+            for lat in lateralities:
+                series_sel = df[f"{eff}_{lat}"]
+                have_it = series_sel.apply(lambda x: j in x if isinstance(x, (list, tuple)) else j == x)
+                # if not series_sel.dtype == 'int64':
+                #     pass
+
+                # have_it = (series_sel == i + shift)
+                n_have_it = have_it.sum()
+                ntot = df["n_total"].sum()
+                percent_val = n_have_it / ntot
+
+                # results2.loc[name, adverse_name] += f'{percent_val:.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
+                results_abs2.loc[name, colname.format(adverse=adverse_name, lat=lat)] += n_have_it
+                results2.loc[name, colname.format(adverse=adverse_name, lat=lat)] += percent_val  * 100
+    for i, adverse_name in enumerate(allergy_causes):
+        i += 1
+
+        for lat in lateralities:
+            series_sel = df[f'allergy_cause_{lat}']
+            have_it = series_sel.apply(lambda x: i in x if isinstance(x, (list, tuple)) else i == x)
+            n_have_it = have_it.sum()
+            ntot = df["n_total"].sum()
+            percent_val = n_have_it / ntot
+            results_abs2.loc[name, colname.format(adverse=adverse_name, lat=lat)] += n_have_it
+            results2.loc[name, colname.format(adverse=adverse_name, lat=lat)] += percent_val * 100
+
+
+
+rename_mapping = config['adversenames']['ocular']
+rename_mapping_allergy = config['adversenames']['allergy']
+rename_mapping.update(rename_mapping_allergy)
+results_abs2.rename(columns=rename_mapping, inplace=True)
+results2.rename(columns=rename_mapping, inplace=True)
+
+
+print("Adverse effects per data in percent of total injections, percent, antikoag and stuff together")
+print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
+      "\n(medication, uni/bilateral injection taken from table name/encoding)")
+print(results2)
+
+print("Adverse effects per data in absolute numbers")
+print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
+      "\n(medication, uni/bilateral injection taken from table name/encoding)")
+print(results_abs2)
+# save results
+adversedir = Path('outputs/adverse_effects')
+adversedir.mkdir(parents=True, exist_ok=True)
+outfile_hyposphagma = adversedir / 'hypo_iod_summary'
+out = "Adverse effects, per data in percent of total injections \n" \
+      "====================================================\n"
+out += str(results_abs2)
+
+outfile_hyposphagma.with_suffix('.txt').write_text(out)
+
+results_abs2.to_excel(outfile_hyposphagma.with_suffix('.xlsx'), sheet_name='hyposphagma')
+
+
+# sys.exit(0)
+
+
+
+
+
+
 
 # plt.figure(figsize=(10, 5))
 # df.plot.scatter(x='bcva_sum_diff', y=n_medic_col, cmap='coolwarm',)
@@ -439,11 +564,11 @@ df_coord.loc[:, 'coordbase4'] += df_coord.pop('coordbase2_6')
 df_coord_out = "Coordination types, n_bilateral_txe * 2 \n" \
                "============================================\n"
 df_coord_out += str(df_coord)
-outfile = Path('outputs/df_coord')
-outfile.parent.mkdir(parents=True, exist_ok=True)
-with open(outfile.with_suffix('.txt'), 'w') as f:
+adversedir = Path('outputs/df_coord')
+adversedir.parent.mkdir(parents=True, exist_ok=True)
+with open(adversedir.with_suffix('.txt'), 'w') as f:
     f.write(df_coord_out)
-df_coord.to_excel(outfile.with_suffix('.xlsx'), sheet_name='n_bilateral_txe')
+df_coord.to_excel(adversedir.with_suffix('.xlsx'), sheet_name='n_bilateral_txe')
 print(df_coord_out)
 
 
@@ -646,14 +771,14 @@ df_general.rename(index=cfg_general['indexnames'], columns=cfg_general['columnna
 df_general.rename(columns=diagnoses_name_mapping, inplace=True)
 df_general_out = str(df_general)
 print(df_general_out)
-outfile = Path('outputs/df_general')
-outfile.parent.mkdir(parents=True, exist_ok=True)
-with open(outfile.with_suffix('.txt'), 'w') as f:
+adversedir = Path('outputs/df_general')
+adversedir.parent.mkdir(parents=True, exist_ok=True)
+with open(adversedir.with_suffix('.txt'), 'w') as f:
     f.write(df_general_out)
-df_general.to_excel(outfile.with_suffix('.xlsx'), sheet_name=cfg_general['sheetname'])
+df_general.to_excel(adversedir.with_suffix('.xlsx'), sheet_name=cfg_general['sheetname'])
 
 # adversarial effects
-lateralities = ['bilateral', 'unilateral']
+
 
 for laterality in lateralities:
     for name, data in name_data_iter:
@@ -675,27 +800,50 @@ def n_adverse_from_list_of_types(x):
     return sum([int(y) > 0 for y in str(x).replace(',', '').replace('  ', ' ').split(' ')])
 
 for adverse_type in ['ocular', 'systemic']:
-    df_adverse = pd.DataFrame(index=lateralities, columns=[f'effect_{i + 1}' for i in range(neffects[adverse_type])])
-    df_adverse.fillna(0, inplace=True)
+    df_adverse = pd.DataFrame(
+        index=lateralities,
+        columns=[f"effect_{i + 1}" for i in range(neffects[adverse_type])]
+        + [f"effect_{i}" for i in range(100, 104)]  # hyposphagma, IOD
+        + allergy_causes
+    )
+    df_adverse.fillna(0., inplace=True)
+
     dfs[adverse_type] = df_adverse
 
 
     for name, data in name_data_iter:
-        for laterality in lateralities:
+        for lat in lateralities:
             # count the number of adverse events
-            data[f'n_{adverse_type}_ae_{laterality}'] = data[f'{adverse_type}_ae_{laterality}'].apply(lambda x: n_adverse_from_list_of_types(x))
+            data[f'n_{adverse_type}_ae_{lat}'] = data[f'{adverse_type}_ae_{lat}'].apply(lambda x: n_adverse_from_list_of_types(x))
             adv_counter = Counter()
             for row in data.itertuples():
-                effects = str(getattr(row, f'{adverse_type}_ae_{laterality}'))
+                effects = str(getattr(row, f'{adverse_type}_ae_{lat}'))
                 effects = effects.replace(',', ' ').split(' ')
                 effects = [int(x) for x in effects if x not in ['', '0']]
                 row_counter = Counter(effects)
                 adv_counter += row_counter
 
             for effect, count in adv_counter.items():
-                df_adverse.loc[laterality, f'effect_{effect}'] += count
+                df_adverse.loc[lat, f'effect_{effect}'] += count
+            # add 'IOL dezentriert/HKL subluxiert', effect 15 and 18
+            if adverse_type == 'ocular':
+                for i, effect in enumerate(hypo_iods):
+                    df_adverse.loc[lat, f"effect_10{i}"] += results_abs2.loc[name, f'{effect}_{lat}']
+                for i, cause in enumerate(allergy_causes):
+                    df_adverse.loc[lat, f"allergy_{i + 1}"] += results_abs2.loc[name, f'{cause}_{lat}']
+    if adverse_type == 'systemic':
+        df_adverse.drop(columns=[f'effect_10{i}' for i in range(4)], inplace=True)
+        df_adverse.drop(columns=[f'allergy_{i}' for i in range(1,7)], inplace=True)
+    # add hyposphagma non-antikoag, antikoag and iod glaukom, non-glaukom
+    df_adverse.loc[:, 'effect_15'] += df_adverse.loc[:, 'effect_18']
+    df_adverse.drop(columns='effect_18', inplace=True)
+    # remove effect 6, Charles Bonnet
+    df_adverse.drop(columns='effect_6', inplace=True)
+
+
 
 for adverse_type in ['ocular', 'systemic']:
+
     rename_mapping = config['adversenames'][adverse_type]
     dfs[adverse_type].rename(columns=rename_mapping, inplace=True)
 for df in dfs.values():
@@ -718,14 +866,14 @@ for dfs_use, normalized in zip([dfs, dfs_normalized], [False, True]):
         out += "\n____________________\n"
     print(out)
 
-    outfile = Path(f'outputs/df_adverse{"_percent" if normalized else ""}')
-    outfile.parent.mkdir(parents=True, exist_ok=True)
-    with open(outfile.with_suffix('.txt'), 'w') as f:
+    adversedir = Path(f'outputs/df_adverse{"_percent" if normalized else ""}')
+    adversedir.parent.mkdir(parents=True, exist_ok=True)
+    with open(adversedir.with_suffix('.txt'), 'w') as f:
         f.write(out)
 
     for adv_type, df in dfs_use.items():
         for transpose in True, False:
-            file = Path(str(outfile) + f'_{adv_type}{"_transposed" if transpose else ""}')
+            file = Path(str(adversedir) + f'_{adv_type}{"_transposed" if transpose else ""}')
             df_tmp = df
             if normalized:
 
@@ -744,6 +892,8 @@ columns = [
     'male_female_percent',
     'n_unilateral',
     'n_bilateral',
+    'bcva_baseline_r_mean',
+    'bcva_baseline_l_mean',
     'delta_bcva',
     'n_lucentis_total',
     'n_lucentis_unilateral',
@@ -751,6 +901,7 @@ columns = [
     'n_eylea_total',
     'n_eylea_unilateral',
     'n_eylea_bilateral',
+    'n_cat_surgery',
 ]
 
 df_summary = pd.DataFrame(index=diagnoses, columns=columns)
@@ -769,6 +920,13 @@ for name, data in name_data_iter:
     df_summary.loc[name, 'male_female_percent'] = female_male_string
     df_summary.loc[name, 'n_unilateral'] = data['n_unilateral'].sum()
     df_summary.loc[name, 'n_bilateral'] = data['n_bilateral'].sum()
+    df_summary.loc[name, 'bcva_baseline_r_mean'] = round(data['bcva_baseline_r'].mean(), 3)
+    df_summary.loc[name, 'bcva_baseline_l_mean'] = round(data['bcva_baseline_l'].mean(), 3)
+    df_summary.loc[name, 'bcva_baseline_mean'] = round((data['bcva_baseline_r'].mean() + data['bcva_baseline_l'].mean())/2, 3)
+
+    # cat surgery
+    cat_surgery_map = {0: 0, 1: 2, 2: 1, 3: 1}
+    df_summary.loc[name, 'n_cat_surgery'] = data['cat_surgery'].apply(lambda x: cat_surgery_map[x]).sum()
     for medication in medications:
         df_summary.loc[name, f'n_{medication}_total'] = data[f'n_{medication}_total'].sum()
         df_summary.loc[name, f'n_{medication}_unilateral'] = data[f'n_unilateral_{medication}'].sum()
@@ -781,14 +939,29 @@ df_summary.rename(columns=config['data_general']['columnnames'], index=diagnoses
 # df_summary.rename(, inplace=True)
 df_summary_out = str(df_summary)
 print(df_summary_out)
-outfile = Path('outputs/df_summary')
-outfile.parent.mkdir(parents=True, exist_ok=True)
-with open(outfile.with_suffix('.txt'), 'w') as f:
+adversedir = Path('outputs/df_summary')
+adversedir.parent.mkdir(parents=True, exist_ok=True)
+with open(adversedir.with_suffix('.txt'), 'w') as f:
     f.write(df_summary_out)
 
-df_summary.to_excel(outfile.with_suffix('.xlsx'), sheet_name='summary')
+df_summary.to_excel(adversedir.with_suffix('.xlsx'), sheet_name='summary')
 
 from scipy.stats import binom as binomsp
+
+name_n_unilat = '# unilateral'
+name_n_bilat = '# bilateral'
+
+# compare
+def calc_pval_fisher(row):
+
+    n_unilat = row[name_n_unilat]
+    n_bilat = row[name_n_bilat]
+    n_unilat_ae = row['unilateral']
+    n_bilat_ae = row['bilateral']
+    pval = scipy.stats.fisher_exact([[n_unilat_ae, n_bilat_ae], [n_unilat - n_unilat_ae, n_bilat - n_bilat_ae]], alternative='two-sided')[1]
+    # pval = scipy.stats.fisher_exact([[n_unilat_ae, n_unilat - n_unilat_ae], [n_bilat_ae, n_bilat - n_bilat_ae]])[1]
+    return pval
+
 
 for advtype in ['ocular', 'systemic']:
     df = dfs[advtype]
@@ -801,9 +974,18 @@ for advtype in ['ocular', 'systemic']:
     z = pd.DataFrame({'p value': scipy.stats.norm.sf(np.abs(z)) *2}, #twosided
                      index=z.index)
     nadv = ptot.shape[0]
-    dftmp = pd.DataFrame({'proba bilateral': p_bilat, 'proba unilateral': p_unilat,
-               'n_bilateral': [n_bilat] * nadv, 'n_unilateral': [n_unilat] * nadv, 'p_total': ptot})
-    dfadvtest = pd.concat([z, df.loc['unilateral'], df.loc['bilateral'], dftmp], axis=1)
+    zbilat_larger = np.where((p_bilat > p_unilat).array, z.values[:, 0] * 0.5,  # one sided test
+                             1)
+
+    dftmp = pd.DataFrame({'zstat p value bilat > unilat': zbilat_larger,
+                          'zstat p value': z.values[:, 0],
+                          'Prob. unilateral': p_unilat, 'Prob. bilateral': p_bilat, name_n_unilat: [n_unilat] * nadv,
+                          name_n_bilat: [n_bilat] * nadv, 'Prob. total': ptot})
+
+
+    dfadvtest = pd.concat([dftmp, df.loc['unilateral'], df.loc['bilateral']], axis=1)
+    dfadvtest['p value fisher'] = dfadvtest.apply(calc_pval_fisher, axis='columns')
+    dfadvtest['rel. incr. fisher to zstat in %'] = np.round((dfadvtest['p value fisher'] - dfadvtest['zstat p value']) / dfadvtest['p value fisher'], 2) * 100
     print(f"Adverse events {advtype} test statistics")
     print(dfadvtest)
     with open(Path('outputs') / f'df_adverse_{advtype}_teststatistic.txt', 'w') as f:
@@ -813,10 +995,10 @@ for advtype in ['ocular', 'systemic']:
 
 dataall = pd.concat(datasets, ignore_index=True).reset_index(drop=True)
 nmax = 10  # TODO, how many?
-bins = None
 ntot_ae = None
 nmin = 0
-x = np.linspace(nmin, nmax, nmax + 1)
+npoints = nmax + 1
+x = np.linspace(nmin, nmax, npoints)
 def plot_data_pdf(ps, title, data):
     if not isinstance(ps, list):
         ps = [ps]
@@ -824,11 +1006,11 @@ def plot_data_pdf(ps, title, data):
     plt.figure()
     plt.title(title)
     nbins = 50
-    h = hist.Hist.new.Reg(nbins, nmin, nmax).Double()
+    h = hist.Hist.new.Reg(npoints, nmin -0.5, nmax + 0.5).Double()
     h.fill(data)
-    bins, edges, fig = plt.hist(data, bins=50, density=True, alpha=0.5)
-    # mplhep.histplot(h, histtype='errorbar', color='k', label='data', alpha=0.5, yerr=True)
-    # ntot_ae = np.sum(bins)
+    # bins, edges, fig = plt.hist(data, bins=50, density=True, alpha=0.5)
+    mplhep.histplot(h, histtype='errorbar', color='k', label='data', alpha=0.5, yerr=True)
+    ntot_ae = np.sum(h.counts())
     for i, p in enumerate(ps):
         if i == 0:
             label = 'binom pmf'
@@ -847,7 +1029,7 @@ def plot_data_pdf(ps, title, data):
             fmt = 'y-.'
         else:
             raise ValueError("Too many ps")
-        plt.plot(x, np.sum(bins) * binomsp.pmf(x, nmax, p), fmt, label=label)
+        plt.plot(x, ntot_ae * binomsp.pmf(x, nmax, p), fmt, label=label)
     plt.xlabel('Number of adverse events')
     plt.ylabel('# patients')
     plt.legend()
@@ -871,36 +1053,43 @@ def create_loss(data, n):
     return nll
 
 # TODO: mix ocular & systemic adverse events (one dataset)
-datafit = dataall['n_ocular_ae_bilateral']
-ntot_ae = datafit.sum()
-nll = create_loss(datafit, nmax)
+datafit_notseldf = dataall[['n_ocular_ae_bilateral']]
+datafit_notsel = dataall['n_ocular_ae_bilateral']
 
-import zfit
-zfit.run.set_autograd_mode(False)
-zfit.run.set_graph_mode(False)
+for sel in ['n_ocular_ae_bilateral < 30', ' n_ocular_ae_bilateral < 3']:
+    datafit = datafit_notseldf.query(sel)['n_ocular_ae_bilateral']
+    ntot_ae = datafit.sum()
+    nll = create_loss(datafit, nmax)
 
-p = zfit.Parameter("p", 0.02, 0, 1)
-plot_data_pdf(p, title="Before fit", data =datafit)
-minimizer = zfit.minimize.Minuit()
-result = minimizer.minimize(nll, p).update_params()
-result.hesse()
-result.errors()
-print(result)
-plot_data_pdf(p, title="After fit", data=datafit)
-pval = result.params[p]['value']
-upper = result.params[p]['errors']['upper']
-lower = result.params[p]['errors']['lower']
-plot_data_pdf([pval, pval + upper, pval + lower, pval + 2 * upper, pval - 2 * lower],
-              title="After fit", data=datafit)
+    import zfit
+    zfit.run.set_autograd_mode(False)
+    zfit.run.set_graph_mode(False)
 
-asimov = binomsp.rvs(size=int(ntot_ae) *1, n=nmax, p=p)  # TODO: asimov?
-nll_asimov = create_loss(asimov, nmax)
-result_asimov = minimizer.minimize(nll_asimov, p).update_params()
-result_asimov.hesse()
-result_asimov.errors()
-print(result_asimov)
-pval = result_asimov.params[p]['value']
-plot_data_pdf([pval, pval + result_asimov.params[p]['errors']['upper'], pval + result_asimov.params[p]['errors']['lower']], title="Asimov fit", data=asimov)
+    p = zfit.Parameter("p", 0.02, 0, 1)
+    plot_data_pdf(p, title="Before fit" + sel, data =datafit)
+    minimizer = zfit.minimize.Minuit()
+    result = minimizer.minimize(nll, p).update_params()
+    result.hesse()
+    result.errors()
+    print(result)
+    title_afterfit = "After fit" + sel
+    plot_data_pdf(p, title=title_afterfit, data=datafit_notsel)
+    pval = result.params[p]['value']
+    upper = result.params[p]['errors']['upper']
+    lower = result.params[p]['errors']['lower']
+    plot_data_pdf([pval, pval + upper, pval + lower, pval + 2 * upper, pval + 2 * lower],
+                  title=title_afterfit, data=datafit_notsel)
+
+    asimov = binomsp.rvs(size=int(ntot_ae) *1, n=nmax, p=p)  # TODO: asimov?
+    nll_asimov = create_loss(asimov[asimov < 3], nmax)
+    result_asimov = minimizer.minimize(nll_asimov, p).update_params()
+    result_asimov.hesse()
+    result_asimov.errors()
+    print(result_asimov)
+    pval = result_asimov.params[p]['value']
+    plot_data_pdf([pval, pval + result_asimov.params[p]['errors']['upper'],
+                   pval + result_asimov.params[p]['errors']['lower']],
+                  title="Asimov fit" + sel, data=asimov)
 
 # TODO: check if higher chance that multiple adverse events (poisson?)
 
@@ -924,6 +1113,7 @@ for lat in ['bilateral', 'unilateral']:
     print(f"Ocular adv per {lat} injection {rel_adv_per_bilat:.3f} +- {sig_adv_per_bilat:.3f}")
 
 import scipy.stats
+
 # Done below: correlation of number of bilateral/unilateral with number of adversarial events
 # TODO: ocular correlation with systemic
 

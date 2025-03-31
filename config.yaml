@@ -2,13 +2,26 @@ data_general:
   columnnames:
     eylea: 'Eylea'
     lucentis: 'Lucentis'
-    avg_age: 'Durchnittsalter'
-    n_injections: 'Anzahl Injektionen'
-    male_female_ratio_percent: 'Männlich/Weiblich (%)'
+    avg_age: 'age (mean)'
+    n_injections: '# total injections'
+    male_female_percent: 'male/female (%)'
     n_patients: '# patients'
     n_unilateral: '# unilateral'
     n_bilateral: '# bilateral'
     delta_bcva: 'Δ BCVA'
+    bcva_baseline_r_mean: 'BCVA Baseline R (mean)'
+    bcva_baseline_l_mean: 'BCVA Baseline L (mean)'
+#    bcva_baseline_r_median: 'BCVA Baseline R (median)'
+#    bcva_baseline_l_median: 'BCVA Baseline L (median)'
+    bcva_baseline_mean: 'BCVA Baseline (mean)'
+#    bcva_baseline_median: 'BCVA Baseline (median)'
+    n_cat_surgery: '# cataract surgery'
+    n_lucentis_unilateral: '# unilateral Lucentis'
+    n_eylea_unilateral: '# unilateral Eylea'
+    n_lucentis_bilateral: '# bilateral Lucentis'
+    n_eylea_bilateral: '# bilateral Eylea'
+    n_lucentis_total: '# total Lucentis'
+    n_eylea_total: '# total Eylea'
   indexnames:
     bilat: 'Bilateral IVT'
     unilat: 'Unilateral IVT'
@@ -76,53 +89,65 @@ diagnosesnames:
 # English
 adversenames:
   ocular:
-    effect_1: 'Lidprobleme'
-    effect_2: 'Mouches, GK Destruktion, ERF, HGA'
-    effect_3: 'VK oder GK Blutung'
-    effect_4: 'NH Foramen und Makulaschichtforamen'
-    effect_5: 'ZVV oder VAV unilateral'
-    effect_6: 'Charles bonnet'
-    effect_7: 'BH Pathologien'
-    effect_8: 'Uveitis anterior'
-    effect_9: 'HH Pathologien'
-    effect_10: 'Doppelbilder'
-    effect_11: 'Amotio rhetinae'
+    effect_1: 'Eyelid problems'
+    effect_2: 'Floaters, VB degeneration, ERF, PVD'  # VB=vitreous body, PVD=posterior vitreous detachment
+    effect_3: 'AC or VB hemorrhage'  # AC=anterior chamber, VB=vitreous body
+    effect_4: 'Macular hole and lamellar macular hole'
+    effect_5: 'CRV or BRV unilateral'  # CRV=central retinal vein, BRV=branch retinal vein
+    effect_6: 'Charles Bonnet'
+    effect_7: 'Retinal pathologies'
+    effect_8: 'Anterior uveitis'
+    effect_9: 'Posterior segment pathologies'
+    effect_10: 'Double vision'
+    effect_11: 'Retinal detachment'
     effect_12: 'Endophthalmitis'
-    effect_13: 'AH Nävus'
-    effect_14: 'Erosio cornea, Ulcus cornea'
-    effect_15: 'IOL dezentriert'
-    effect_16: 'Augenmigräne'
-    effect_17: 'Iritis, Iridocyclitis, Irisdefekt'
-    effect_18: 'HKL subluxiert'
-    effect_19: 'Hyposphagma'
-    effect_20: 'Sicca'
+    effect_13: 'Choroidal nevus'
+    effect_14: 'Corneal erosion, corneal ulcer'
+    effect_15: 'IOL decentered/lens subluxation'  # IOL=intraocular lens
+    effect_16: 'Ocular migraine'
+    effect_17: 'Iritis, iridocyclitis, iris defect'
+    effect_18: 'IGNORE'
+    effect_19: 'Hyposphagma (subconjunctival hemorrhage)'
+    effect_20: 'Dry eye'
     effect_21: 'Allergy'
-    effect_22: 'IOD'
+    effect_22: 'IOP'  # IOP=intraocular pressure
+    effect_100: "Hyposphagma anti-coagulation"  # Hyposphagma (subconjunctival hemorrhage) due to anticoagulation
+    effect_101: "Hyposphagma coagulation"  # Hyposphagma (subconjunctival hemorrhage) due to coagulation
+    effect_102: "IOD no Glaucoma"  # IOP (intraocular pressure) due to glaucoma
+    effect_103: "IOD Glaucoma"  # IOP (intraocular pressure) due to glaucoma
   systemic:
-    effect_1: 'Tod'
-    effect_2: 'Hospitalisation Grund unbekannt'
-    effect_3: 'Hosp Sturzereignis, Fraktur'
-    effect_4: 'Hosp Elektive Eingriffe'
-    effect_5: 'Lagerungsbedingte Beschwerden, RückenSz'
-    effect_6: 'CVI'
-    effect_7: 'Onkolog. Path.'
-    effect_8: 'Hosp Stoffwechselerkrankungen, Infektionen, Dialyse, Fieber'
-    effect_9: 'Hosp Lungenentz, akute Dyspnoe.'
-    effect_10: 'Synkope'
-    effect_11: 'Schwindel, Kopfschmerzen, transiente Sehstörungen, Parästhesien'
-    effect_12: 'Herzinfarkt'
-    effect_13: 'TVT'
-    effect_14: 'Psychische Erkrankungen'
-    effect_15: 'Facialisparese'
-    effect_16: 'Lungenembolie'
-    effect_17: 'Dermatologische Probleme, Haarausfall'
-    effect_18: 'Herzrhythmusstörungen, Herzrasen, VHFli, Kreislaufbeschwerden'
-    effect_19: 'Appendizitis'
-    effect_20: 'Rheumatologische Pathologie'
-    effect_21: 'Hosp Mediüberdosierung'
-    effect_22: 'Epileptischer Anfall'
-    effect_23: 'Aneurysmaruptur'
+    effect_1: 'Death'
+    effect_2: 'Hospitalization cause unknown'
+    effect_3: 'Hosp fall event, fracture'
+    effect_4: 'Hosp elective procedures'
+    effect_5: 'Position-related complaints, back pain'
+    effect_6: 'Stroke'
+    effect_7: 'Oncological path.'
+    effect_8: 'Hosp metabolic diseases, infections, dialysis, fever'
+    effect_9: 'Hosp pneumonia, acute dyspnea'
+    effect_10: 'Syncope'
+    effect_11: 'Dizziness, headache, transient visual disturbances, paresthesia'
+    effect_12: 'Heart attack'
+    effect_13: 'DVT'  # DVT=deep vein thrombosis
+    effect_14: 'Psychological disorders'
+    effect_15: 'Facial paralysis'
+    effect_16: 'Pulmonary embolism'
+    effect_17: 'Dermatological problems, hair loss'
+    effect_18: 'Cardiac arrhythmias, tachycardia, AFib, circulatory problems'
+    effect_19: 'Appendicitis'
+    effect_20: 'Rheumatological pathology'
+    effect_21: 'Hosp medication overdose'
+    effect_22: 'Epileptic seizure'
+    effect_23: 'Aneurysm rupture'
     effect_24: 'Epistaxis'
+  allergy:
+    allergy_0: "Allergy None"
+    allergy_1: "Allergy Preservatives"
+    allergy_2: "Allergy Iodine"
+    allergy_3: "Allergy Tobrex"
+    allergy_4: "Allergy Octenisept"
+    allergy_5: "Allergy Disinfectant"
+    allergy_6: "Allergy Unclear"
 
 coordnames:
   coordbase1: "different disease activity"
