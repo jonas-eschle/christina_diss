@@ -635,10 +635,15 @@ def pie_diagram(data, name: str):
 
         datatoplot = [coord_same,
                   coord_diff,
-                  coord_none,
-                  n_bilat_teprn]
-        labelstoplot = ['bilateral T&E coordination same interval', 'bilateral T&E coordination different interval',
-                'bilateral T&E no coordination', 'T&E and PRN']
+                      coord_none,
+                      n_bilat_teprn,
+                      ]
+        labelstoplot = [
+            'Equal TER',
+            'Coordinated TER',
+            'Async TER',
+            'Mixed TER and PRN',
+        ]
         colorstoplot = colorsdiag
         datacleaned = []
         labelscleaned = []
@@ -717,7 +722,7 @@ plt.subplot(rows, cols, 6)
 plt.legend(
     loc='lower center',
     bbox_to_anchor=(-0.15, -0.5),
-    ncol=2, frameon=False)
+    ncol=2, frameon=False,)
 filename = 'pie_diagrams_bars.png'
 output_file = Path('plots/pie1') / filename
 output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -742,7 +747,8 @@ plt.legend(
     loc='upper right',
     bbox_to_anchor=(1.35, 1.2),
     # ncol=2,
-    frameon=False
+    frameon=False,
+    fontsize=50
 )
 filename = 'pie_diagrams.png'
 output_file = Path('plots/pie1') / filename
@@ -787,7 +793,7 @@ for laterality in lateralities:
             data[f'ocular_ae_{laterality}'] = data[f'ocular_ae_{laterality}'].astype(str) + " " + (
                     has_adverse * (19 + i)).astype(str)
 
-        # print(data[f'ocular_ae_{laterality}'])
+        print(data[f'ocular_ae_{laterality}'])
         # preprocess data, add the two adverse effects
 
 dfs = {'ocular': None, 'systemic': None}
@@ -902,6 +908,8 @@ columns = [
     'n_eylea_unilateral',
     'n_eylea_bilateral',
     'n_cat_surgery',
+    'n_argon_surgery',
+    'n_kapsulotomie_surgery',
 ]
 
 df_summary = pd.DataFrame(index=diagnoses, columns=columns)
@@ -927,6 +935,8 @@ for name, data in name_data_iter:
     # cat surgery
     cat_surgery_map = {0: 0, 1: 2, 2: 1, 3: 1}
     df_summary.loc[name, 'n_cat_surgery'] = data['cat_surgery'].apply(lambda x: cat_surgery_map[x]).sum()
+    df_summary.loc[name, 'n_argon_surgery'] = data['argon'].apply(lambda x: cat_surgery_map[x]).sum()
+    df_summary.loc[name, 'n_kapsulotomie_surgery'] = data['kapsulotomie'].apply(lambda x: cat_surgery_map[x]).sum()
     for medication in medications:
         df_summary.loc[name, f'n_{medication}_total'] = data[f'n_{medication}_total'].sum()
         df_summary.loc[name, f'n_{medication}_unilateral'] = data[f'n_unilateral_{medication}'].sum()
@@ -1158,7 +1168,7 @@ for adv_type in ['ocular', 'systemic']:
         print(f"Total {adv_type} {lat} (spearman) correlation: {spearmancorrtot.statistic:.2f} "
               f"p-value: {spearmancorrtot.pvalue:.2g}")
 
-
+print("End")
 # TODO: more columns in table, christina will provide more
 
 # Done: how many digits? round df_*_percent to 3 digits

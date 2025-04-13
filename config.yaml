@@ -32,7 +32,7 @@ diagnosesnames:
   AMD: 'nAMD'
   DMÖ: 'DME'
   ZVV_VAV: 'RVO'
-  multiple_diagnoses: 'Multiple diagnoses'
+  multiple_diagnoses: 'MD'
 
 # German
 #adversenames:
