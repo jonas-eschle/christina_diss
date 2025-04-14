@@ -148,8 +148,8 @@ christina_diss/slides/
 *.idx
 *.ilg
 *.ind
-*.log
 *.out
 *.toc
 *.synctex.gz
 
+/paper_overleaf/out/
