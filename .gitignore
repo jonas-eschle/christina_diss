@@ -129,3 +129,27 @@ dmypy.json
 .pyre/
 /outputs/
 /plots/
+/flowchart/
+/tmp/
+/data_small.xlsx
+/data_all.xlsx
+/data_small.bkp.xlsx
+
+# pycharm
+.idea/
+
+christina_diss/slides/
+
+# latex files
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.idx
+*.ilg
+*.ind
+*.log
+*.out
+*.toc
+*.synctex.gz
+
