@@ -578,7 +578,7 @@ print(df_coord_out)
 #     "#ffa600",
 #     "#e9484a",
 #     "#951269", ]
-colorsdiag = plt.cm.gray([0.7, 0.55, 0.9, 0.4])
+colorsdiag = plt.cm.gray([ 0.4, 0.7, 0.55, 0.9,])
 
 # hatches = ['/', '\\', '|', '-', '+', 'x', 'o', 'O', '.', '*']
 # hatches = [
@@ -595,7 +595,7 @@ hatchesbar = [
 ]
 hatches = None
 
-def pie_diagram(data, name: str):
+def pie_diagram(data, name: str, *,beta=0):
     """Pie diagram of the different treatment (coord, bilat t&e, coord diff and no coord)."""
     n_bilat_te = data['n_bilateral_txe'].sum() * 2  # 2 injections per person
     n_bilat_teprn = data['n_bilateral_txe_prn'].sum() * 2  # 2 injections per person
@@ -612,8 +612,9 @@ def pie_diagram(data, name: str):
 
     # plt.figure(figsize=(10, 10))
 
-    kwargs = dict(autopct=lambda x: f'{int(x * all_coord / 100)} ({x / 100:.1%})', textprops={'fontsize': 10},
-                  counterclock=True, startangle=90)
+    kwargs = dict(autopct=lambda x: f'{int(x * all_coord / 100)} ({x / 100:.1%})', textprops={'fontsize': 15},
+                  counterclock=True, startangle=0, # 90 + beta,
+                  pctdistance=0.7)
     double_plot = False
     if double_plot:
 
@@ -633,16 +634,17 @@ def pie_diagram(data, name: str):
         pie[0][-1].set_visible(False)
     else:
 
-        datatoplot = [coord_same,
+        datatoplot = [
+            coord_same,
                   coord_diff,
+            n_bilat_teprn,
                       coord_none,
-                      n_bilat_teprn,
                       ]
         labelstoplot = [
             'Equal TER',
             'Coordinated TER',
-            'Async TER',
             'Mixed TER and PRN',
+            'Async TER',
         ]
         colorstoplot = colorsdiag
         datacleaned = []
@@ -659,9 +661,10 @@ def pie_diagram(data, name: str):
                     colors=colorscleaned,
                     labeldistance=None,
                     hatch=hatches,
+                    radius=1,
                     **kwargs)
 
-    plt.title(f'{name}')
+    plt.title(f'{name}', y=0.95, fontsize = 20, pad=0.0)
 
 
 cols = 2
@@ -703,17 +706,41 @@ coordcolnames = [
 ]
 coordcolnames.reverse()
 coordcols = coordcolnames
-for i, (name, data) in enumerate(name_data_iter):
-    if i >= 2:
-        coordcols = [n for i, n in enumerate(coordcolnames) if i in (0, 5, 7)]
-    print("=" * linelength)
-    print(f"Data {diagnoses_name_mapping[name]} pie diagram")
-    print("=" * linelength)
-    plt.subplot(rows, cols, plotnrpie[i])
-    pie_diagram(data, diagnoses_name_mapping[name])
 
-    plt.subplot(rows, cols, (ploti := plotnrbar[i]))
-    if ploti in (4, 8):  # right hbar, no labels
+# Bar plot with pia diagrams, uncomment to plot
+# for i, (name, data) in enumerate(name_data_iter):
+#     if i >= 2:
+#         coordcols = [n for i, n in enumerate(coordcolnames) if i in (0, 5, 7)]
+#     print("=" * linelength)
+#     print(f"Data {diagnoses_name_mapping[name]} pie diagram")
+#     print("=" * linelength)
+#     plt.subplot(rows, cols, plotnrpie[i])
+#     pie_diagram(data, diagnoses_name_mapping[name])
+#
+#     plt.subplot(rows, cols, (ploti := plotnrbar[i]))
+#     if ploti in (4, 8):  # right hbar, no labels
+#         plt.gca().set_yticklabels([])
+#     plot_barh(df_coord, coordcols, name, invert=i % 2 == 0)
+# # plt.suptitle('Pie diagrams of different treatment')
+#
+# plt.subplot(rows, cols, 6)
+# plt.legend(
+#     loc='lower center',
+#     bbox_to_anchor=(-0.15, -0.5),
+#     ncol=2, frameon=False,)
+# filename = 'pie_diagrams_bars.pdf'
+# output_file = Path('plots/pie1') / filename
+# output_file.parent.mkdir(parents=True, exist_ok=True)
+# plt.savefig(output_file)
+
+# only bar plot
+plt.subplots(2, 2, figsize=(20, 20))
+for i in range(4):  # TODO
+    # if i >= 2:
+    coordcols = [n for i, n in enumerate(coordcolnames) if i in (1, 3)]
+    plt.subplot(rows, cols, i + 1)
+
+    if i in (1, 3):  # right hbar, no labels
         plt.gca().set_yticklabels([])
     plot_barh(df_coord, coordcols, name, invert=i % 2 == 0)
 # plt.suptitle('Pie diagrams of different treatment')
@@ -723,8 +750,8 @@ plt.legend(
     loc='lower center',
     bbox_to_anchor=(-0.15, -0.5),
     ncol=2, frameon=False,)
-filename = 'pie_diagrams_bars.png'
-output_file = Path('plots/pie1') / filename
+filename = 'coord_reason_bars.pdf'
+output_file = Path('plots/bars') / filename
 output_file.parent.mkdir(parents=True, exist_ok=True)
 plt.savefig(output_file)
 
@@ -734,7 +761,7 @@ nrows = 2
 plt.subplots(nrows, ncols, figsize=(20, 20))
 for i, (name, data) in enumerate(name_data_iter):
     plt.subplot(nrows, ncols, i + 1)
-    pie_diagram(data, diagnoses_name_mapping[name])
+    pie_diagram(data, diagnoses_name_mapping[name], beta=-27 if i == 1 else 0)
 
     # plt.subplot(rows, cols, (ploti := plotnrbar[i]))
     # if ploti in (4, 8):  # right hbar, no labels
@@ -743,14 +770,17 @@ for i, (name, data) in enumerate(name_data_iter):
 # plt.suptitle('Pie diagrams of different treatment')
 
 plt.subplot(nrows, ncols, 3)
+plt.tight_layout()
 plt.legend(
     loc='upper right',
-    bbox_to_anchor=(1.35, 1.2),
+    bbox_to_anchor=(1.2, 1.1),
     # ncol=2,
     frameon=False,
-    fontsize=50
+    fontsize=20,
+    borderaxespad=0.0,
+    borderpad=0.0,
 )
-filename = 'pie_diagrams.png'
+filename = 'pie_diagrams.pdf'
 output_file = Path('plots/pie1') / filename
 output_file.parent.mkdir(parents=True, exist_ok=True)
 plt.savefig(output_file)
@@ -851,7 +881,6 @@ for adverse_type in ['ocular', 'systemic']:
 
 
 for adverse_type in ['ocular', 'systemic']:
-
     rename_mapping = config['adversenames'][adverse_type]
     dfs[adverse_type].rename(columns=rename_mapping, inplace=True)
 for df in dfs.values():
