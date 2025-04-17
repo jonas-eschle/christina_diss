@@ -511,17 +511,21 @@ coords_all_cols = sorted(coords_all_cols)
 dfs_coordbase = [pd.DataFrame() for _ in name_data_iter]
 
 df_coord = pd.DataFrame()
+df_coord_all = pd.DataFrame()
 for name, data in name_data_iter:
     for coord_type in ['same', 'different']:
-        rowname = f'{name}_{coord_type}_interval'
+        rowname_nodata = f'{coord_type}_interval'
+        rowname = f'{name}_{rowname_nodata}'
         for coord_base in coord_bases:
             colname = f'coordbase{coord_base}'
             if coord_base in [2, 3]:
                 for coord_cause in coord_reasons_2o3:
                     colname_add = f'{colname}_{coord_cause}'
                     df_coord.loc[rowname, colname_add] = 0.
+                    df_coord_all.loc[rowname_nodata, colname_add] = 0.
             else:
                 df_coord.loc[rowname, colname] = 0.
+                df_coord_all.loc[rowname_nodata, colname] = 0.
 
 for name, data in name_data_iter:
     for coord_base in coord_bases:
@@ -558,6 +562,16 @@ for name, data in name_data_iter:
                 df_coord.loc[rowname, colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
 df_coord.loc[:, 'coordbase4'] += df_coord.pop('coordbase2_6')
 
+for name, _ in name_data_iter:
+    for inter in ['same', 'different']:
+        df_coord_all.loc[f'{inter}_interval'] = 0.
+
+for name, _ in name_data_iter:
+    for inter in ['same', 'different']:
+        df_coord_all.loc[f'{inter}_interval'] += df_coord.loc[f'{name}_{inter}_interval']
+
+df_coord_all
+
 # for coord_type in ['same', 'different']:
 #     queried_data = data.query(f"coordination_{coord_type}_intervall == 1 & {base_query}")
 
@@ -569,6 +583,16 @@ adversedir.parent.mkdir(parents=True, exist_ok=True)
 with open(adversedir.with_suffix('.txt'), 'w') as f:
     f.write(df_coord_out)
 df_coord.to_excel(adversedir.with_suffix('.xlsx'), sheet_name='n_bilateral_txe')
+print(df_coord_out)
+
+df_coord_out = "Coordination types merged, n_bilateral_txe * 2 \n" \
+               "============================================\n"
+df_coord_out += str(df_coord_all)
+adversedir = Path('outputs/df_coord_merged')
+adversedir.parent.mkdir(parents=True, exist_ok=True)
+with open(adversedir.with_suffix('.txt'), 'w') as f:
+    f.write(df_coord_out)
+df_coord_all.to_excel(adversedir.with_suffix('.xlsx'), sheet_name='n_bilateral_txe')
 print(df_coord_out)
 
 
