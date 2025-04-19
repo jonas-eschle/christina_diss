@@ -706,11 +706,11 @@ def plot_barh(data, coordcolnames: list[str], name: str, invert=False):
     coordlabels = [coordnames[col] for col in coordcolnames]
     left = np.zeros((len(coordcolnames),))
 
-    coords = ['same', 'different', 'none']
+    coords = ['same', 'different']
     for coord, color, hatch in zip(coords, colorsdiag[:-1], hatchesbar):
         diff = [data.loc[f'{name}_{coord}_interval', col] for col in coordcolnames]
 
-        plt.barh(coordlabels, left + diff, color=color, left=left, hatch=hatch)
+        plt.barh(coordlabels, left + diff, color=color, left=left, hatch=hatch, label=name)
         if invert:
             # plt.gca().yaxis.tick_right()
             plt.gca().tick_params(axis='both', which='major', labelsize=6)
@@ -759,9 +759,9 @@ coordcols = coordcolnames
 
 # only bar plot
 plt.subplots(2, 2, figsize=(20, 20))
-for i in range(4):  # TODO
+for name, data in name_data_iter:
     # if i >= 2:
-    coordcols = [n for i, n in enumerate(coordcolnames) if i in (1, 3)]
+    coordcols = coordcolnames
     plt.subplot(rows, cols, i + 1)
 
     if i in (1, 3):  # right hbar, no labels
