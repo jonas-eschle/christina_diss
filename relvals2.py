@@ -22,6 +22,7 @@ datasets = [pd.read_excel("data_small.xlsx", sheet_name=name).reset_index(drop=T
 pd.set_option('display.max_columns', None, 'display.max_rows', None, 'display.expand_frame_repr', False)
 diagnoses_name_mapping = config['diagnosesnames']
 coordnames = config['coordnames']
+schemenames = config['schemenames']
 
 ########################################################################################################################
 # Preprocessing of data
@@ -516,9 +517,9 @@ for name, data in name_data_iter:
     for coord_type in ['same', 'different']:
         rowname_nodata = f'{coord_type}_interval'
         rowname = f'{name}_{rowname_nodata}'
-        for coord_base in coord_bases:
-            colname = f'coordbase{coord_base}'
-            if coord_base in [2, 3]:
+        for no_coord_base in coord_bases:
+            colname = f'coordbase{no_coord_base}'
+            if no_coord_base in [2, 3]:
                 for coord_cause in coord_reasons_2o3:
                     colname_add = f'{colname}_{coord_cause}'
                     df_coord.loc[rowname, colname_add] = 0.
@@ -527,18 +528,38 @@ for name, data in name_data_iter:
                 df_coord.loc[rowname, colname] = 0.
                 df_coord_all.loc[rowname_nodata, colname] = 0.
 
+nocoord_bases = [1, 2, 3, 4]
+nocoordcolnames = [
+    "nocoordbase1",
+    "nocoordbase2",
+    "nocoordbase3",
+    "nocoordbase4",
+]
+noncoord_treat = ['async', 'prn']
+df_nocoord = pd.DataFrame(columns=nocoordcolnames, index=[f'{diag}_{treat}' for diag in diagnoses for treat in noncoord_treat])
 for name, data in name_data_iter:
-    for coord_base in coord_bases:
-        colname = f'coordbase{coord_base}'
-        base_query = f'coordination_base == {coord_base}'
+    for no_coord_base in nocoord_bases:
+        colname = f'nocoordbase{no_coord_base}'
+        base_query = f'no_coordination_cause == {no_coord_base}'
+        df_sel = data.query(f"no_coordination == 1 & {base_query}")
 
-        for coord_type in ['same', 'different', 'none']:
-            if coord_type == 'none':
-                df_sel = data.query(f"no_coordination == 1 & {base_query}")
-            else:
-                df_sel = data.query(f"coordination_{coord_type}_intervall == 1 & {base_query}")
+        df_nocoord.loc[f'{name}_{noncoord_treat[0]}', colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
+        df_nocoord.loc[f"{name}_{noncoord_treat[1]}", colname] = (
+            df_sel["n_bilateral_txe_prn"].sum() * 2
+        )  # two eyes
+
+df_nocoord_all = pd.DataFrame(columns=nocoordcolnames, index=noncoord_treat)
+
+
+for name, data in name_data_iter:
+    for no_coord_base in coord_bases:
+        colname = f'coordbase{no_coord_base}'
+        base_query = f'coordination_base == {no_coord_base}'
+
+        for coord_type in ['same', 'different']:
+            df_sel = data.query(f"coordination_{coord_type}_intervall == 1 & {base_query}")
             rowname = f'{name}_{coord_type}_interval'
-            if coord_base in [2, 3]:
+            if no_coord_base in [2, 3]:
                 for row in df_sel.itertuples():
                     coord_causes = []
                     for x in str(row.coordination_cause).split(','):
@@ -561,16 +582,21 @@ for name, data in name_data_iter:
             else:
                 df_coord.loc[rowname, colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
 df_coord.loc[:, 'coordbase4'] += df_coord.pop('coordbase2_6')
+df_coord_all.drop(columns=['coordbase2_6'], inplace=True)
 
 for name, _ in name_data_iter:
     for inter in ['same', 'different']:
         df_coord_all.loc[f'{inter}_interval'] = 0.
+    for treat in noncoord_treat:
+        df_nocoord_all.loc[f'{treat}'] = 0.
 
 for name, _ in name_data_iter:
     for inter in ['same', 'different']:
         df_coord_all.loc[f'{inter}_interval'] += df_coord.loc[f'{name}_{inter}_interval']
+    for treat in noncoord_treat:
+        df_nocoord_all.loc[f'{treat}'] += df_nocoord.loc[f'{name}_{treat}']
 
-df_coord_all
+
 
 # for coord_type in ['same', 'different']:
 #     queried_data = data.query(f"coordination_{coord_type}_intervall == 1 & {base_query}")
@@ -594,6 +620,26 @@ with open(adversedir.with_suffix('.txt'), 'w') as f:
     f.write(df_coord_out)
 df_coord_all.to_excel(adversedir.with_suffix('.xlsx'), sheet_name='n_bilateral_txe')
 print(df_coord_out)
+
+df_nocoord_out = "No oordination types, n_bilateral_txe * 2/n_bilateral txe_prn * 2 \n" \
+               "====================================================================\n"
+df_nocoord_out += str(df_nocoord)
+adversedir = Path('outputs/df_nocoord')
+adversedir.parent.mkdir(parents=True, exist_ok=True)
+with open(adversedir.with_suffix('.txt'), 'w') as f:
+    f.write(df_nocoord_out)
+df_nocoord.to_excel(adversedir.with_suffix('.xlsx'), sheet_name='no_coord_causes')
+print(df_nocoord_out)
+
+df_nocoord_out = "Coordination types merged, n_bilateral_txe * 2 \n" \
+               "============================================\n"
+df_nocoord_out += str(df_coord_all)
+adversedir = Path('outputs/df_nocoord_merged')
+adversedir.parent.mkdir(parents=True, exist_ok=True)
+with open(adversedir.with_suffix('.txt'), 'w') as f:
+    f.write(df_nocoord_out)
+df_nocoord_all.to_excel(adversedir.with_suffix('.xlsx'), sheet_name='n_bilateral_txe')
+print(df_nocoord_out)
 
 
 # colorsdiag = [
@@ -691,28 +737,18 @@ def pie_diagram(data, name: str, *,beta=0):
     plt.title(f'{name}', y=0.95, fontsize = 20, pad=0.0)
 
 
-cols = 2
-rows = 4
-plotnrpie = {0: 1, 1: 2, 2: 5, 3: 6}
-plotnrbar = {0: 3, 1: 4, 2: 7, 3: 8}
-
-plt.subplots(rows, cols, figsize=(20, 20), height_ratios=[7, 8 / 3, 7, 1])
-
-
 
 def plot_barh(data, coordcolnames: list[str], name: str, invert=False):
-    # n_bilat_teprn = data['n_bilateral_txe_prn'].sum() * 2  # 2 injections per person
-
     coordlabels = [coordnames[col] for col in coordcolnames]
     left = np.zeros((len(coordcolnames),))
 
-    coords = ['same', 'different']
+    coords = ['same', 'different'] 
     for coord, color, hatch in zip(coords, colorsdiag[:-1], hatchesbar):
         diff = [data.loc[f'{name}_{coord}_interval', col] for col in coordcolnames]
 
-        plt.barh(coordlabels, left + diff, color=color, left=left, hatch=hatch, label=name)
+        plt.barh(coordlabels, left + diff, color=color, left=left, hatch=hatch, label=coord)
         if invert:
-            # plt.gca().yaxis.tick_right()
+            plt.gca().yaxis.tick_right()
             plt.gca().tick_params(axis='both', which='major', labelsize=6)
             plt.gca().invert_xaxis()
         left += diff
@@ -728,8 +764,87 @@ coordcolnames = [
     "coordbase3_5",
     "coordbase1",
 ]
+
+
 coordcolnames.reverse()
-coordcols = coordcolnames
+coordlabels = [coordnames[col] for col in coordcolnames]
+nocoordlabels =  [coordnames[col] for col in nocoordcolnames]
+
+df_coord_allT = df_coord_all[coordcolnames].transpose()
+df_nocoord_allT = df_nocoord_all[nocoordcolnames].transpose()
+
+# Coordination plot
+plt.figure(figsize=(20, 10))
+# plt.suptitle('Coordination reasons', fontsize=20)
+ax= plt.subplot(1, 2, 1)
+left = np.zeros((len(coordcolnames),))
+# left = None
+
+color = "grey"
+
+ax.set_title(schemenames['same'], fontsize=20)
+labelsize_barh = 15
+plt.barh(coordlabels, df_coord_allT['same_interval'], left=left,
+         # label=schemenames['same'],
+         color=color)
+ax.tick_params(axis='y', labelsize=labelsize_barh)
+ax.invert_xaxis()
+
+
+ax = plt.subplot(1, 2, 2)
+ax.set_title(schemenames['different'], fontsize=20)
+plt.barh(coordlabels, df_coord_allT['different_interval'], left=left,
+         # label=schemenames['different'],
+         color=color)
+
+ax.yaxis.tick_right()
+labelsize_barh_both = 6
+ax.tick_params(axis='both', which='major', labelsize=labelsize_barh_both)
+
+
+ax.set_yticklabels([])
+
+
+plt.tight_layout()
+filename = 'coord_reason_bars.pdf'
+output_file = Path('plots/bars') / filename
+output_file.parent.mkdir(parents=True, exist_ok=True)
+plt.savefig(output_file)
+
+# no coordination plot
+plt.figure(figsize=(20, 5))
+ax= plt.subplot(1, 2, 1)
+left = np.zeros((len(nocoordcolnames),))
+
+color = "grey"
+
+ax.set_title(schemenames['mixed'], fontsize=20)
+plt.barh(nocoordlabels, df_nocoord_allT['prn'], left=left,
+         # label=schemenames['same'],
+         color=color)
+
+ax.invert_xaxis()
+ax.tick_params(axis='y', labelsize=labelsize_barh)
+
+
+ax = plt.subplot(1, 2, 2)
+ax.set_title(schemenames['async'], fontsize=20)
+plt.barh(nocoordlabels, df_nocoord_allT['async'], left=left,
+         # label=schemenames['different'],
+
+         color=color)
+ax.yaxis.tick_right()
+
+ax.tick_params(axis='both', which='major', labelsize=labelsize_barh_both)
+ax.set_yticklabels([])
+plt.tight_layout()
+filename = 'nocoord_reason_bars.pdf'
+output_file = Path('plots/bars') / filename
+output_file.parent.mkdir(parents=True, exist_ok=True)
+plt.savefig(output_file)
+
+
+plt.show()
 
 # Bar plot with pia diagrams, uncomment to plot
 # for i, (name, data) in enumerate(name_data_iter):
@@ -758,26 +873,28 @@ coordcols = coordcolnames
 # plt.savefig(output_file)
 
 # only bar plot
-plt.subplots(2, 2, figsize=(20, 20))
-for name, data in name_data_iter:
-    # if i >= 2:
-    coordcols = coordcolnames
-    plt.subplot(rows, cols, i + 1)
-
-    if i in (1, 3):  # right hbar, no labels
-        plt.gca().set_yticklabels([])
-    plot_barh(df_coord, coordcols, name, invert=i % 2 == 0)
-# plt.suptitle('Pie diagrams of different treatment')
-
-plt.subplot(rows, cols, 6)
-plt.legend(
-    loc='lower center',
-    bbox_to_anchor=(-0.15, -0.5),
-    ncol=2, frameon=False,)
-filename = 'coord_reason_bars.pdf'
-output_file = Path('plots/bars') / filename
-output_file.parent.mkdir(parents=True, exist_ok=True)
-plt.savefig(output_file)
+# rows = 2
+# cols = 2
+# plt.subplots(rows, cols, figsize=(20, 20))
+# for name, data in name_data_iter:
+#     # if i >= 2:
+#     coordcols = coordcolnames
+#     plt.subplot(rows, cols, i + 1)
+#
+#     if i in (1, 3):  # right hbar, no labels
+#         plt.gca().set_yticklabels([])
+#     plot_barh(df_coord, coordcols, name, invert=i % 2 == 0)
+# # plt.suptitle('Pie diagrams of different treatment')
+#
+# plt.subplot(rows, cols, 6)
+# plt.legend(
+#     loc='lower center',
+#     bbox_to_anchor=(-0.15, -0.5),
+#     ncol=2, frameon=False,)
+# filename = 'coord_reason_bars.pdf'
+# output_file = Path('plots/bars') / filename
+# output_file.parent.mkdir(parents=True, exist_ok=True)
+# plt.savefig(output_file)
 
 # only pie diagrams
 ncols = 2
@@ -1120,10 +1237,11 @@ def create_loss(data, n):
 # TODO: mix ocular & systemic adverse events (one dataset)
 datafit_notseldf = dataall[['n_ocular_ae_bilateral']]
 datafit_notsel = dataall['n_ocular_ae_bilateral']
+ntot_ae = datafit_notseldf.query("n_ocular_ae_bilateral < 30")['n_ocular_ae_bilateral'].shape[0]
 
-for sel in ['n_ocular_ae_bilateral < 30', ' n_ocular_ae_bilateral < 3']:
-    datafit = datafit_notseldf.query(sel)['n_ocular_ae_bilateral']
-    ntot_ae = datafit.sum()
+for sel in [30, 3]:
+    datafit = datafit_notseldf.query(f"n_ocular_ae_bilateral < {sel}")['n_ocular_ae_bilateral']
+
     nll = create_loss(datafit, nmax)
 
     import zfit
@@ -1131,13 +1249,13 @@ for sel in ['n_ocular_ae_bilateral < 30', ' n_ocular_ae_bilateral < 3']:
     zfit.run.set_graph_mode(False)
 
     p = zfit.Parameter("p", 0.02, 0, 1)
-    plot_data_pdf(p, title="Before fit" + sel, data =datafit)
+    plot_data_pdf(p, title=f"Before fit {sel}", data =datafit)
     minimizer = zfit.minimize.Minuit()
     result = minimizer.minimize(nll, p).update_params()
     result.hesse()
     result.errors()
     print(result)
-    title_afterfit = "After fit" + sel
+    title_afterfit = f"After fit {sel}"
     plot_data_pdf(p, title=title_afterfit, data=datafit_notsel)
     pval = result.params[p]['value']
     upper = result.params[p]['errors']['upper']
@@ -1145,8 +1263,8 @@ for sel in ['n_ocular_ae_bilateral < 30', ' n_ocular_ae_bilateral < 3']:
     plot_data_pdf([pval, pval + upper, pval + lower, pval + 2 * upper, pval + 2 * lower],
                   title=title_afterfit, data=datafit_notsel)
 
-    asimov = binomsp.rvs(size=int(ntot_ae) *1, n=nmax, p=p)  # TODO: asimov?
-    nll_asimov = create_loss(asimov[asimov < 3], nmax)
+    asimov = binomsp.rvs(size=int(ntot_ae), n=nmax, p=pval)
+    nll_asimov = create_loss(asimov[asimov < sel], nmax)
     result_asimov = minimizer.minimize(nll_asimov, p).update_params()
     result_asimov.hesse()
     result_asimov.errors()
@@ -1154,7 +1272,12 @@ for sel in ['n_ocular_ae_bilateral < 30', ' n_ocular_ae_bilateral < 3']:
     pval = result_asimov.params[p]['value']
     plot_data_pdf([pval, pval + result_asimov.params[p]['errors']['upper'],
                    pval + result_asimov.params[p]['errors']['lower']],
-                  title="Asimov fit" + sel, data=asimov)
+                  title=f"Asimov fit {sel}", data=asimov)
+
+    deltaLL = result.fmin - result_asimov.fmin
+    nsigma = (deltaLL * 2) ** 0.5
+    pvalue = scipy.stats.chi2.sf(nsigma ** 2, 1)
+    print(fr"Delta LL: {deltaLL} = {nsigma} $\sigma$, p-value: {pvalue:.2g}")
 
 # TODO: check if higher chance that multiple adverse events (poisson?)
 

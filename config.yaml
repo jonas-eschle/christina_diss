@@ -158,8 +158,18 @@ coordnames:
   coordbase3_3: "liquid in worse eye tolerated with poor visual prognosis"
   coordbase3_5: "fluid in worse eye tolerated with stable or slowly\n reabsorbed exudate under prolonged intervals"
   coordbase4: "equal disease activity"
+  nocoordbase1: "interval determination phase \n/ varying disease activity"
+  nocoordbase2: "very different treatment stages\n(start of treatment vs. end)"
+  nocoordbase3: "at patient's request \n/ does not want bilateral injections\n/ no coordination needed with long intervals \nand low appointment frequency"
+  nocoordbase4: "Status post Cerebrovascular Insult\n/ condition after stroke"
 
 
 
+
+schemenames:
+  same: "Equal TER"
+  different: "Coordinated TER"
+  mixed: "Mixed TER and PRN"
+  async: "Async TER"
 
 
