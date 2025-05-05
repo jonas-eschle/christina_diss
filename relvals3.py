@@ -476,28 +476,62 @@ outfile_hyposphagma.with_suffix('.txt').write_text(out)
 results_abs2.to_excel(outfile_hyposphagma.with_suffix('.xlsx'), sheet_name='hyposphagma')
 
 
-# sys.exit(0)
+## Stopping reasons
+# Create dataframe for treatment ending analysis
+# Bilateral \ac{IVT} was stopped in xxx patients, whereof
+# xxx were due to treatment success (erste spalte 1) ,
+# xxx changed the clinic (erste: 3, zweite: 2),
+# xxx due to severe illness, hospitalization or death (erste: 3, zweite: 3),
+# xxx were lost to follow up (erste: 3, zweite: 4),
+# xxx due to lack of treatment success (erste: 3, zweite: 6),
+# xxx at patient’s request (erste: 3, zweite: 5 (+7, just in some)),
+# xxx continuation with Ozurdex (erste: 5),
+# xxx one eye succes, other too bad (erste 4).
+treatstopcols = ['tstop_1',
+                 'tstop_4',
+                 'tstop_5',
+                 'tstop_3_2',
+                    'tstop_3_3',
+                    'tstop_3_4',
+                 'tstop_3_5',
+                 'tstop_3_6',
+                 'tstop_3_7',
+                 ]
+treatstopdf= pd.DataFrame(columns=treatstopcols, index=['counts', 'percent']).fillna(0.)
+
+n_patients_total = data_all.shape[0]
+for col in treatstopcols:
+    selvals = col.split('_')[1:]
+    sel = f'treatment_ending == {selvals[0]}'
+    if len(selvals) > 1:
+        sel += f' & treatment_abortion_cause == {selvals[1]}'
+    n_patients = data_all.query(sel).shape[0]
+    treatstopdf.loc['counts', col] = float(n_patients)
+    treatstopdf.loc['percent', col] = n_patients / n_patients_total * 100
+
+treatstopdf.loc[:, 'tstop_3_5'] += treatstopdf.loc[:, 'tstop_3_7']
+del treatstopdf['tstop_3_7']
+
+treatstop_names = config['treatment_ending_names']
+treatstopdf = treatstopdf.rename(columns=treatstop_names).transpose()
+print(treatstopdf)
+
+
+out = "Treatment ending analysis \n" \
+        "====================================================\n"
+out += str(treatstopdf)
+outfile_treatstop = Path('outputs/treatment_ending')
+outfile_treatstop.mkdir(parents=True, exist_ok=True)
+outfile_treatstop = outfile_treatstop / 'treatment_ending'
+outfile_treatstop.with_suffix('.txt').write_text(out)
+
+treatstopdf.to_excel(outfile_treatstop.with_suffix('.xlsx'), sheet_name='treatment_ending')
+
+print("Treatment ending analysis complete.")
 
 
 
 
-
-
-
-# plt.figure(figsize=(10, 5))
-# df.plot.scatter(x='bcva_sum_diff', y=n_medic_col, cmap='coolwarm',)
-#
-#
-#
-#         # plt.figure(figsize=(10, 5))
-#         # df.plot.scatter(x='bcva_sum_diff', y='hyposphagma_bilateral', cmap='coolwarm', )
-#
-#     # print(data.columns)
-#     # create new column
-#     # print("hello world")
-#     # n_tot = data.shape[0]
-#     # print(f'number of people {n_tot}')
-#     # print(f'number of ivi {sum(data["n_total"])}')
 plt.show()
 
 # split by coordination same or different interval
@@ -542,11 +576,15 @@ for name, data in name_data_iter:
         colname = f'nocoordbase{no_coord_base}'
         base_query = f'no_coordination_cause == {no_coord_base}'
         df_sel = data.query(f"no_coordination == 1 & {base_query}")
+        npatients = df_sel.shape[0]
+        # raise RuntimeError(f"n_patients: {npatients}")
+        df_nocoord.loc[f'{name}_{noncoord_treat[0]}', colname] = npatients  # TODO: what is this?
 
-        df_nocoord.loc[f'{name}_{noncoord_treat[0]}', colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
-        df_nocoord.loc[f"{name}_{noncoord_treat[1]}", colname] = (
-            df_sel["n_bilateral_txe_prn"].sum() * 2
-        )  # two eyes
+        # df_nocoord.loc[f"{name}_{noncoord_treat[1]}", colname] = npatients
+        # df_nocoord.loc[f'{name}_{noncoord_treat[0]}', colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
+        # df_nocoord.loc[f"{name}_{noncoord_treat[1]}", colname] = (
+        #     df_sel["n_bilateral_txe_prn"].sum() * 2
+        # )  # two eyes
 
 df_nocoord_all = pd.DataFrame(columns=nocoordcolnames, index=noncoord_treat)
 
@@ -577,10 +615,12 @@ for name, data in name_data_iter:
                         # if rowname not in df_coord.index:
                         #     df_coord.loc[rowname] = 0
 
-                        df_coord.loc[rowname, colname_add] += row.n_bilateral_txe * 2 / n_coord_causes
+                        # df_coord.loc[rowname, colname_add] += row.n_bilateral_txe * 2 / n_coord_causes
+                        df_coord.loc[rowname, colname_add] += 1
                     # print(type(row.coordination_cause), row.coordination_cause)
             else:
-                df_coord.loc[rowname, colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
+                # df_coord.loc[rowname, colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
+                df_coord.loc[rowname, colname] = df_sel.shape[0]
 df_coord.loc[:, 'coordbase4'] += df_coord.pop('coordbase2_6')
 df_coord_all.drop(columns=['coordbase2_6'], inplace=True)
 

@@ -172,4 +172,19 @@ schemenames:
   mixed: "Mixed TER and PRN"
   async: "Async TER"
 
+# Treatment_ending      Behandlungsabschluss T&E     Rezidivfrei nach 3x 14 Wo 1__ Behandlung läuft weiter 2__ Behandlung abgebrochen 3__        T&E Auge Rezidivfrei oder wechsel zu PRN, PRN Auge lohnt sich nicht mehr wegen schlechtem Visus 4__ Weiterführende Therapie mit Ozurdex 5
+#  Treatment_abortion_cause        Gründe für Behandlungsabbruch      nicht betroffen 1__     Arzt-/Klinikwechsel 2__ Krankheit/Hospitalisation oder Tod des Pat 3__  lost to follow-up 4__ Pat will keine IVI mehr 5__ Kein Therapieansprechen 6
+treatment_ending_names:
+  tstop_1: "Residual free after 3x 14 weeks"
+  tstop_2: "Treatment continues"
+  tstop_3: "Treatment stopped"
+  tstop_3_1: "Not affected"
+  tstop_3_2: "Change of doctor/hospital"
+  tstop_3_3: "Illness/hospitalization or death of the patient"
+  tstop_3_4: "Lost to follow-up"
+  tstop_3_5: "Patient no longer wants IVI"
+  tstop_3_6: "No treatment response"
+  tstop_4: "TER residual free or change to PRN, PRN eye no longer worth it due to poor vision"
+  tstop_5: "Treatment with Ozurdex"
+
 
