@@ -754,14 +754,14 @@ def pie_diagram(data, name: str, *,beta=0):
 
 
     datatoplot = [
+        coord_diff,
         coord_same,
-              coord_diff,
         n_bilat_teprn,
                   coord_none,
                   ]
     labelstoplot = [
-        'Equal TER',
         'Coordinated TER',
+        'Equal TER',
         'Mixed TER and PRN',
         'Async TER',
     ]
@@ -891,9 +891,41 @@ filename = 'nocoord_reason_bars.pdf'
 output_file = Path('plots/bars') / filename
 output_file.parent.mkdir(parents=True, exist_ok=True)
 plt.savefig(output_file)
-
-
 plt.show()
+
+
+# new barchart
+
+barlabels = coordlabels + nocoordlabels
+colnames = coordcolnames + nocoordcolnames
+left = np.zeros((len(barlabels),))
+
+coords = ["same", "different", "async"]
+datacordall = pd.concat([df_coord_allT.rename(columns={'same_interval': 'same', 'different_interval': 'different'}), df_nocoord_allT], axis=1).fillna(0.)
+
+colorforbars = [colorsdiag[i] for i in [3, 1, 0]]
+
+coords = coords[::-1]
+for coord, color, hatch in zip(coords, colorforbars, hatchesbar):
+    diff = [datacordall.loc[col, coord] for col in colnames]
+
+    plt.barh(barlabels, left + diff, color=color, left=left,
+             # hatch=hatch,
+             label=schemenames[coord])
+    # if invert:
+    #     plt.gca().yaxis.tick_right()
+    #     plt.gca().tick_params(axis="both", which="major", labelsize=6)
+    #     plt.gca().invert_xaxis()
+    left += diff
+plt.gca().tick_params(axis="both", which="major", labelsize=labelsize_barh_both)
+plt.legend()
+plt.tight_layout()
+filename = 'all_reason_bars.pdf'
+output_file = Path('plots/bars') / filename
+output_file.parent.mkdir(parents=True, exist_ok=True)
+plt.savefig(output_file)
+plt.show()
+
 
 # Bar plot with pia diagrams, uncomment to plot
 # for i, (name, data) in enumerate(name_data_iter):
