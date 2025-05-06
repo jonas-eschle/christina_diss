@@ -11,10 +11,10 @@ data_general:
     delta_bcva: 'Δ BCVA'
     bcva_baseline_r_mean: 'BCVA Baseline R (mean)'
     bcva_baseline_l_mean: 'BCVA Baseline L (mean)'
-#    bcva_baseline_r_median: 'BCVA Baseline R (median)'
-#    bcva_baseline_l_median: 'BCVA Baseline L (median)'
+    #    bcva_baseline_r_median: 'BCVA Baseline R (median)'
+    #    bcva_baseline_l_median: 'BCVA Baseline L (median)'
     bcva_baseline_mean: 'BCVA Baseline (mean)'
-#    bcva_baseline_median: 'BCVA Baseline (median)'
+    #    bcva_baseline_median: 'BCVA Baseline (median)'
     n_cat_surgery: '# cataract surgery'
     n_lucentis_unilateral: '# unilateral Lucentis'
     n_eylea_unilateral: '# unilateral Eylea'
@@ -171,6 +171,8 @@ schemenames:
   different: "Coordinated TER"
   mixed: "Mixed TER and PRN"
   async: "Async TER"
+
+
 
 # Treatment_ending      Behandlungsabschluss T&E     Rezidivfrei nach 3x 14 Wo 1__ Behandlung läuft weiter 2__ Behandlung abgebrochen 3__        T&E Auge Rezidivfrei oder wechsel zu PRN, PRN Auge lohnt sich nicht mehr wegen schlechtem Visus 4__ Weiterführende Therapie mit Ozurdex 5
 #  Treatment_abortion_cause        Gründe für Behandlungsabbruch      nicht betroffen 1__     Arzt-/Klinikwechsel 2__ Krankheit/Hospitalisation oder Tod des Pat 3__  lost to follow-up 4__ Pat will keine IVI mehr 5__ Kein Therapieansprechen 6
