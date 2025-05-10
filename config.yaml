@@ -22,6 +22,9 @@ data_general:
     n_eylea_bilateral: '# bilateral Eylea'
     n_lucentis_total: '# total Lucentis'
     n_eylea_total: '# total Eylea'
+    pretreat_no: 'No previous IVT'
+    pretreat_uni: 'Previous IVT unilateral'
+    pretreat_bi: 'Previous IVT bilateral'
   indexnames:
     bilat: 'Bilateral IVT'
     unilat: 'Unilateral IVT'

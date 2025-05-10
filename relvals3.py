@@ -1169,6 +1169,20 @@ columns = [
     'n_cat_surgery',
     'n_argon_surgery',
     'n_kapsulotomie_surgery',
+    'pretreat_no',
+    'pretreat_uni',
+    'pretreat_bi',
+
+]
+
+cols_to_percent = [
+    'pretreat_no',
+    'pretreat_uni',
+    'pretreat_bi',
+    'n_cat_surgery',
+    'n_argon_surgery',
+    'n_kapsulotomie_surgery',
+
 ]
 
 df_summary = pd.DataFrame(index=diagnoses, columns=columns)
@@ -1191,10 +1205,9 @@ for name, data in name_data_iter:
     df_summary.loc[name, 'bcva_baseline_l_mean'] = round(data['bcva_baseline_l'].mean(), 3)
     df_summary.loc[name, 'bcva_baseline_mean'] = round((data['bcva_baseline_r'].mean() + data['bcva_baseline_l'].mean())/2, 3)
 
-    nopre = (data['pretreated'] == 0).sum()  # TODO: percent for all, per diagnosis
-    df_summary.loc[name, 'No previous IVT'] = f'{nopre} ({nopre / n_patients:.1%})'
-    df_summary.loc[name, 'Previous IVT unilateral'] = (data['pretreated'] == 2).sum() + (data['pretreated'] == 3).sum()
-    df_summary.loc[name, 'Previous IVT bilateral'] = (data['pretreated'] == 1).sum()
+    df_summary.loc[name, 'pretreat_no'] = (data['pretreated'] == 0).sum()
+    df_summary.loc[name, 'pretreat_uni'] = (data['pretreated'] == 2).sum() + (data['pretreated'] == 3).sum()
+    df_summary.loc[name, 'pretreat_bi'] = (data['pretreated'] == 1).sum()
 
 
     # cat surgery
@@ -1207,6 +1220,9 @@ for name, data in name_data_iter:
         df_summary.loc[name, f'n_{medication}_unilateral'] = data[f'n_unilateral_{medication}'].sum()
         df_summary.loc[name, f'n_{medication}_bilateral'] = data[f'n_bilateral_{medication}'].sum()
     df_summary.loc[name, 'delta_bcva'] = round(data['bcva_sum_diff'].mean(), 3)
+
+    for col in cols_to_percent:
+        df_summary.loc[name, col] = f"{df_summary.loc[name, col]} ({df_summary.loc[name, col] / n_patients:.1%})"
 
 n_injections = pd.Series({'unilateral': df_summary['n_unilateral'].sum(),
                           'bilateral': df_summary['n_bilateral'].sum()})
