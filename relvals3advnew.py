@@ -81,57 +81,55 @@ data_all.reset_index(drop=True, inplace=True)
 lateral = ['uni', 'bi']
 
 
-# shifts_lat = {'uni': 0, 'bi': 2}
-results = pd.DataFrame(index=index, columns=adverse_hypo.values())
-results_abs = pd.DataFrame(index=index, columns=adverse_hypo.values())
-for name, data in name_data_iter:
-    print("=" * linelength)
-    print(f"Data {diagnoses_name_mapping[name]} adverse effects")
-    print("=" * linelength)
-    n_collected = {}
-    n_collected_std = {}
-
-    df = data.copy()
-    for medication in medications:
-        for lat in lateral:
-            key = f'_{medication[:3]}_{lat}'
-            # shift_lat = shifts_lat[lat]
-            shift = shifts_med[medication]
-            for i, adverse_name in adverse_hypo.items():
-                series_sel = df[f'hyposphagma_{lat}lateral']
-                series_sel = series_sel.apply(lambda x: i if (isinstance(x, (list, tuple)) and i in x) else x)
-                if not series_sel.dtype == 'int64':
-                    pass
-                have_it = (series_sel == i + shift)
-                n_have_it = have_it.sum()
-                ntot = df["n_total"].sum()
-                percent_val = n_have_it / ntot
-                results.loc[
-                    (name, medication, lat), adverse_name] = f'{percent_val:.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
-                results_abs.loc[(name, medication, lat), adverse_name] = f'{n_have_it} +- {n_have_it ** 0.5:.1f}'
-
-
-
-print("Adverse effects per data in percent of total injections")
-print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
-      "\n(medication, uni/bilateral injection taken from table name/encoding)")
-print(results)
-
-print("Adverse effects per data in absolute numbers")
-print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
-      "\n(medication, uni/bilateral injection taken from table name/encoding)")
-print(results_abs)
-# save results
-adversedir = Path('outputs/adverse_effects')
-adversedir.mkdir(parents=True, exist_ok=True)
-outfile_hyposphagma = adversedir / 'hyposphagma'
-out = "Adverse effects, per data in percent of total injections \n" \
-        "====================================================\n"
-out += str(results_abs)
-
-outfile_hyposphagma.with_suffix('.txt').write_text(out)
-
-results_abs.to_excel(outfile_hyposphagma.with_suffix('.xlsx'), sheet_name='hyposphagma')
+# # shifts_lat = {'uni': 0, 'bi': 2}
+# results = pd.DataFrame(index=index, columns=adverse_hypo.values())
+# results_abs = pd.DataFrame(index=index, columns=adverse_hypo.values())
+# for name, data in name_data_iter:
+#     print("=" * linelength)
+#     print(f"Data {diagnoses_name_mapping[name]} adverse effects")
+#     print("=" * linelength)
+#     n_collected = {}
+#     n_collected_std = {}
+#
+#     df = data.copy()
+#     for medication in medications:
+#         for lat in lateral:
+#             key = f'_{medication[:3]}_{lat}'
+#             for i, adverse_name in adverse_hypo.items():
+#                 series_sel = df[f'hyposphagma_{lat}lateral']
+#                 series_sel = series_sel.apply(lambda x: i if (isinstance(x, (list, tuple)) and i in x) else x)
+#                 if not series_sel.dtype == 'int64':
+#                     pass
+#                 have_it = (series_sel == i + shift)
+#                 n_have_it = have_it.sum()
+#                 ntot = df["n_total"].sum()
+#                 percent_val = n_have_it / ntot
+#                 results.loc[
+#                     (name, medication, lat), adverse_name] = f'{percent_val:.1%} +- {n_have_it ** 0.5 / ntot:.1%}'
+#                 results_abs.loc[(name, medication, lat), adverse_name] = f'{n_have_it} +- {n_have_it ** 0.5:.1f}'
+#
+#
+#
+# print("Adverse effects per data in percent of total injections")
+# print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
+#       "\n(medication, uni/bilateral injection taken from table name/encoding)")
+# print(results)
+#
+# print("Adverse effects per data in absolute numbers")
+# print("Columns: adverse effects.\nIndex: split by data, medication, uni/bilateral injection"
+#       "\n(medication, uni/bilateral injection taken from table name/encoding)")
+# print(results_abs)
+# # save results
+# adversedir = Path('outputs/adverse_effects')
+# adversedir.mkdir(parents=True, exist_ok=True)
+# outfile_hyposphagma = adversedir / 'hyposphagma'
+# out = "Adverse effects, per data in percent of total injections \n" \
+#         "====================================================\n"
+# out += str(results_abs)
+#
+# outfile_hyposphagma.with_suffix('.txt').write_text(out)
+#
+# results_abs.to_excel(outfile_hyposphagma.with_suffix('.xlsx'), sheet_name='hyposphagma')
 
 
 # add subcategories for hyposhagma and IOD. Looks similar to above, but is different
@@ -178,9 +176,10 @@ for name, data in name_data_iter:
 
 
 
-            for lat in lateralities:
+            for lat in lateralities:  # have it vs n have it
                 series_sel = df[f"{eff}_{lat}"]
-                have_it = series_sel.apply(lambda x: j in x if isinstance(x, (list, tuple)) else j == x)
+                # TODO: number of adverse effects or n patients with adverse?
+                have_it = series_sel.apply(lambda x: sum(np.array(x.replace(' ', '').split(','), dtype=int) == j) if isinstance(x, str) else int(x == j))
                 # if not series_sel.dtype == 'int64':
                 #     pass
 

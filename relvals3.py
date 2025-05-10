@@ -245,6 +245,7 @@ print(f"n_unilateral={data_all['n_unilateral'].sum():.0f}")
 print(f"n women={data_all.query('sex==1').shape[0]}")
 print(f"n men={data_all.query('sex==2').shape[0]}")
 
+
 print("\n\n\n")
 
 replace_keys = ["lat", "med"]
@@ -580,6 +581,8 @@ for name, data in name_data_iter:
         # raise RuntimeError(f"n_patients: {npatients}")
         df_nocoord.loc[f'{name}_{noncoord_treat[0]}', colname] = npatients  # TODO: what is this?
 
+        df_sel_prn = data.query(f"no_coordination == 0 & {base_query}")  # TODO
+
         # df_nocoord.loc[f"{name}_{noncoord_treat[1]}", colname] = npatients
         # df_nocoord.loc[f'{name}_{noncoord_treat[0]}', colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
         # df_nocoord.loc[f"{name}_{noncoord_treat[1]}", colname] = (
@@ -622,6 +625,8 @@ for name, data in name_data_iter:
                 # df_coord.loc[rowname, colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
                 df_coord.loc[rowname, colname] = df_sel.shape[0]
 df_coord.loc[:, 'coordbase4'] += df_coord.pop('coordbase2_6')
+
+
 df_coord_all.drop(columns=['coordbase2_6'], inplace=True)
 
 for name, _ in name_data_iter:
@@ -869,7 +874,7 @@ color = "grey"
 
 ax.set_title(schemenames['mixed'], fontsize=20)
 plt.barh(nocoordlabels, df_nocoord_allT['prn'], left=left,
-         # label=schemenames['same'],
+         # label=schemenames['prn'],
          color=color)
 
 ax.invert_xaxis()
@@ -1185,6 +1190,12 @@ for name, data in name_data_iter:
     df_summary.loc[name, 'bcva_baseline_r_mean'] = round(data['bcva_baseline_r'].mean(), 3)
     df_summary.loc[name, 'bcva_baseline_l_mean'] = round(data['bcva_baseline_l'].mean(), 3)
     df_summary.loc[name, 'bcva_baseline_mean'] = round((data['bcva_baseline_r'].mean() + data['bcva_baseline_l'].mean())/2, 3)
+
+    nopre = (data['pretreated'] == 0).sum()  # TODO: percent for all, per diagnosis
+    df_summary.loc[name, 'No previous IVT'] = f'{nopre} ({nopre / n_patients:.1%})'
+    df_summary.loc[name, 'Previous IVT unilateral'] = (data['pretreated'] == 2).sum() + (data['pretreated'] == 3).sum()
+    df_summary.loc[name, 'Previous IVT bilateral'] = (data['pretreated'] == 1).sum()
+
 
     # cat surgery
     cat_surgery_map = {0: 0, 1: 2, 2: 1, 3: 1}
