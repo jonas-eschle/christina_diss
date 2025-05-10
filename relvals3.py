@@ -569,6 +569,8 @@ nocoordcolnames = [
     "nocoordbase2",
     "nocoordbase3",
     "nocoordbase4",
+    "nocoordbase12",
+    "nocoordbase34"
 ]
 noncoord_treat = ['async', 'prn']
 df_nocoord = pd.DataFrame(columns=nocoordcolnames, index=[f'{diag}_{treat}' for diag in diagnoses for treat in noncoord_treat])
@@ -588,6 +590,7 @@ for name, data in name_data_iter:
         # df_nocoord.loc[f"{name}_{noncoord_treat[1]}", colname] = (
         #     df_sel["n_bilateral_txe_prn"].sum() * 2
         # )  # two eyes
+
 
 df_nocoord_all = pd.DataFrame(columns=nocoordcolnames, index=noncoord_treat)
 
@@ -624,8 +627,11 @@ for name, data in name_data_iter:
             else:
                 # df_coord.loc[rowname, colname] = df_sel['n_bilateral_txe'].sum() * 2  # two eyes
                 df_coord.loc[rowname, colname] = df_sel.shape[0]
-df_coord.loc[:, 'coordbase4'] += df_coord.pop('coordbase2_6')
+df_coord_all.loc[:, 'coordbase4'] += df_coord.pop('coordbase2_6')
+df_coord_all.loc[:, 'coordbase23'] = df_coord['coordbase2_1'] + df_coord['coordbase2_2'] + df_coord['coordbase2_4'] + df_coord['coordbase3_2']
+df_coord_all.loc[:, 'coordbase13'] = df_coord['coordbase3_5'] + df_coord['coordbase1']
 
+toplotcordcols = ['coordbase23', 'coordbase13']
 
 df_coord_all.drop(columns=['coordbase2_6'], inplace=True)
 
@@ -641,6 +647,10 @@ for name, _ in name_data_iter:
     for treat in noncoord_treat:
         df_nocoord_all.loc[f'{treat}'] += df_nocoord.loc[f'{name}_{treat}']
 
+df_nocoord_all['nocoordbase12'] = df_nocoord_all['nocoordbase1'] + df_nocoord_all['nocoordbase2']
+df_nocoord_all['nocoordbase34'] = df_nocoord_all['nocoordbase3'] + df_nocoord_all['nocoordbase4']
+
+toplotcordcols += ["nocoordbase12", "nocoordbase34"]
 
 
 # for coord_type in ['same', 'different']:
@@ -817,6 +827,8 @@ coordcolnames = [
     "coordbase3_3",
     "coordbase3_5",
     "coordbase1",
+    "coordbase23",
+    "coordbase13"
 ]
 
 
@@ -901,9 +913,9 @@ plt.show()
 
 # new barchart
 
-barlabels = coordlabels + nocoordlabels
-colnames = coordcolnames + nocoordcolnames
-left = np.zeros((len(barlabels),))
+# barlabels = coordlabels + nocoordlabels
+# colnames = coordcolnames + nocoordcolnames  # TODO: nocoord: remove 1, 2, add 12
+left = np.zeros((len(toplotcordcols),))
 
 coords = ["same", "different", "async"]
 datacordall = pd.concat([df_coord_allT.rename(columns={'same_interval': 'same', 'different_interval': 'different'}), df_nocoord_allT], axis=1).fillna(0.)
@@ -911,10 +923,11 @@ datacordall = pd.concat([df_coord_allT.rename(columns={'same_interval': 'same', 
 colorforbars = [colorsdiag[i] for i in [3, 1, 0]]
 
 coords = coords[::-1]
+plt.figure()
 for coord, color, hatch in zip(coords, colorforbars, hatchesbar):
-    diff = [datacordall.loc[col, coord] for col in colnames]
+    diff = [datacordall.loc[col, coord] for col in toplotcordcols]
 
-    plt.barh(barlabels, left + diff, color=color, left=left,
+    plt.barh(toplotcordcols, left + diff, color=color, left=left,
              # hatch=hatch,
              label=schemenames[coord])
     # if invert:
@@ -1155,6 +1168,8 @@ columns = [
     'n_patients',
     'n_injections',
     'male_female_percent',
+    "n_male",
+    "n_female"
     'n_unilateral',
     'n_bilateral',
     'bcva_baseline_r_mean',
@@ -1189,6 +1204,7 @@ df_summary = pd.DataFrame(index=diagnoses, columns=columns)
 df_summary.fillna(0, inplace=True)
 for name, data in name_data_iter:
     df_summary.loc[name, 'avg_age'] = round(data['age'].mean(), 1)
+    df_summary.loc[name, 'std_age'] = round(data['age'].std(), 1)
     n_patients = data.shape[0]
     df_summary.loc[name, 'n_patients'] = n_patients
     df_summary.loc[name, 'n_injections'] = data['n_total'].sum()
@@ -1197,17 +1213,30 @@ for name, data in name_data_iter:
     nmale = np.sum(data['sex'] == 2)
     nfemale = np.sum(data['sex'] == 1)
     ntot = nmale + nfemale
-    female_male_string = f'{nmale} ({nmale / ntot:.1%}) / {nfemale} ({nfemale / ntot:.1%})'
+
+    rel_nmale = nmale / ntot
+    rel_nfemale = nfemale / ntot
+    variance_mean = rel_nmale * rel_nfemale / n
+    female_male_string = f'{nmale} ({rel_nmale :.1%}) / {nfemale} ({rel_nfemale :.1%}) +- {variance_mean ** 0.5:.1%}'
     df_summary.loc[name, 'male_female_percent'] = female_male_string
     df_summary.loc[name, 'n_unilateral'] = data['n_unilateral'].sum()
     df_summary.loc[name, 'n_bilateral'] = data['n_bilateral'].sum()
     df_summary.loc[name, 'bcva_baseline_r_mean'] = round(data['bcva_baseline_r'].mean(), 3)
     df_summary.loc[name, 'bcva_baseline_l_mean'] = round(data['bcva_baseline_l'].mean(), 3)
     df_summary.loc[name, 'bcva_baseline_mean'] = round((data['bcva_baseline_r'].mean() + data['bcva_baseline_l'].mean())/2, 3)
+    df_summary.loc[name, 'bcva_baseline_r_std'] = round(data['bcva_baseline_r'].std(), 3)
+    df_summary.loc[name, 'bcva_baseline_l_std'] = round(data['bcva_baseline_l'].std(), 3)
+    df_summary.loc[name, 'bcva_baseline_std'] = round((data['bcva_baseline_r'].std() + data['bcva_baseline_l'].std())/2, 3)
 
-    df_summary.loc[name, 'pretreat_no'] = (data['pretreated'] == 0).sum()
-    df_summary.loc[name, 'pretreat_uni'] = (data['pretreated'] == 2).sum() + (data['pretreated'] == 3).sum()
-    df_summary.loc[name, 'pretreat_bi'] = (data['pretreated'] == 1).sum()
+    n_pretreat_no = (data['pretreated'] == 0).sum()
+    df_summary.loc[name, 'pretreat_no'] = n_pretreat_no
+    n_pretreat_uni = (data['pretreated'] == 2).sum() + (data['pretreated'] == 3).sum() + (data['pretreated'] == 4).sum()
+    df_summary.loc[name, 'pretreat_uni'] = n_pretreat_uni
+    n_pretreat_bi = (data['pretreated'] == 1).sum() + (data['pretreated'] == 5).sum()
+    df_summary.loc[name, 'pretreat_bi'] = n_pretreat_bi
+    if n_pretreat_no + n_pretreat_uni + n_pretreat_bi != n_patients:
+        # print("Sum of pretread doesn't add up!")
+        raise RuntimeError(f"n_pretreat_no + n_pretreat_uni + n_pretreat_bi != n_patients: {n_pretreat_no} + {n_pretreat_uni} + {n_pretreat_bi} != {n_patients}")
 
 
     # cat surgery
